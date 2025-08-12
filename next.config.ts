@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**', // Izinkan semua path dari hostname ini
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
     ],
   },
 };
