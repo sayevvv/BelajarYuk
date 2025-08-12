@@ -1,228 +1,165 @@
-// app/page.tsx
+// app/page.tsx (Landing Page Baru)
+import Link from 'next/link';
+import { ArrowRight, BrainCircuit, Milestone, BookOpen } from 'lucide-react';
 
-"use client";
-
-import { useState, FormEvent, Fragment } from "react";
-import { z } from "zod";
-import RoadmapGraph from "@/components/RoadmapGraph";
-import MindmapGraph from "@/components/MindmapGraph";
-import { Transition } from "@headlessui/react";
-import AuthButtons from "@/components/AuthButtons";
-import { useSession } from "next-auth/react";
-
-// Skema untuk Roadmap (sudah diperbarui ke 'timeframe')
-const roadmapSchema = z.object({
-  duration: z.string(),
-  milestones: z.array(
-    z.object({
-      timeframe: z.string(),
-      topic: z.string(),
-      details: z.string(),
-    })
-  ),
-});
-type RoadmapData = z.infer<typeof roadmapSchema>;
-
-// Skema untuk Mindmap
-const mindmapSchema = z.object({
-  topic: z.string(),
-  subtopics: z.array(
-    z.object({
-      id: z.number(),
-      topic: z.string(),
-      details: z.string(),
-      dependencies: z.array(z.number()),
-    })
-  ),
-});
-type MindmapData = z.infer<typeof mindmapSchema>;
-
-// INI BAGIAN YANG HILANG: Skema baru untuk validasi data penjelasan
-const explanationSchema = z.object({
-  explanation: z.string(),
-});
-
-type Milestone = RoadmapData["milestones"][0];
-
-// Komponen Modal yang sudah diperbarui
-const MindmapModal = ({ mindmapData, explanation, isLoading, onClose, topic }: { 
-    mindmapData: MindmapData | null, 
-    explanation: string | null,
-    isLoading: boolean, 
-    onClose: () => void, 
-    topic: string 
-}) => (
-  <Transition as={Fragment} show={true} appear>
-    <div className="fixed inset-0 z-50 flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
-        <div className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm" />
-      </Transition.Child>
-      <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-        <div className="relative bg-white rounded-2xl shadow-2xl w-[90vw] h-[90vh] flex flex-col overflow-hidden">
-          <header className="flex items-center justify-between flex-shrink-0 p-4 border-b border-slate-200">
-            <h2 className="text-lg font-semibold text-slate-900" id="modal-title">Jabaran Materi: <span className="font-bold text-blue-600">{topic}</span></h2>
-            <button onClick={onClose} className="p-1 transition-colors rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100" aria-label="Close modal"><svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-          </header>
-          <div className="flex flex-grow overflow-hidden">
-            <aside className="w-1/3 p-6 overflow-y-auto border-r border-slate-200 bg-slate-50/50">
-              <h3 className="font-semibold text-slate-800">Penjelasan Lengkap</h3>
-              {isLoading || !explanation ? (
-                <p className="mt-2 text-sm text-slate-500 animate-pulse">AI sedang menulis penjelasan...</p>
-              ) : (
-                <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-slate-600">{explanation}</p>
-              )}
-            </aside>
-            <main className="relative flex-grow w-2/3">
-              {isLoading ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50"><span className="font-medium text-slate-600">Membangun mindmap...</span></div>
-              ) : (
-                mindmapData ? <MindmapGraph data={mindmapData} /> : <div className="flex items-center justify-center h-full text-slate-400">Mindmap akan muncul di sini.</div>
-              )}
-            </main>
-          </div>
-        </div>
-      </Transition.Child>
-    </div>
-  </Transition>
+// Komponen Ikon untuk bagian Fitur
+const FeatureIcon = ({ icon: Icon }: { icon: React.ElementType }) => (
+  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600 text-white">
+    <Icon className="h-6 w-6" />
+  </div>
 );
 
-export default function Home() {
-  const { data: session } = useSession();
-  const [topic, setTopic] = useState("");
-  const [details, setDetails] = useState("");
-  const [roadmapData, setRoadmapData] = useState<RoadmapData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [mindmapData, setMindmapData] = useState<MindmapData | null>(null);
-  const [explanation, setExplanation] = useState<string | null>(null);
-  const [isModalLoading, setIsModalLoading] = useState(false);
-  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+// Komponen Kartu Fitur
+const FeatureCard = ({ icon: Icon, title, children }: { icon: React.ElementType, title: string, children: React.ReactNode }) => (
+  <div className="flex flex-col items-start gap-4 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+    <FeatureIcon icon={Icon} />
+    <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
+    <p className="text-slate-600">{children}</p>
+  </div>
+);
 
-  // Fungsi yang sudah diperbarui untuk memanggil DUA API
-  const handleNodeClick = async (milestone: Milestone) => {
-    setSelectedMilestone(milestone);
-    setIsModalLoading(true);
-    setMindmapData(null);
-    setExplanation(null);
-    setError(null);
+// Komponen Langkah "How It Works"
+const Step = ({ number, title, children }: { number: string, title: string, children: React.ReactNode }) => (
+  <div className="flex flex-col gap-3">
+    <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-blue-600 text-lg font-bold text-blue-600">
+      {number}
+    </div>
+    <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
+    <p className="text-slate-600">{children}</p>
+  </div>
+);
 
-    try {
-      const [mindmapResponse, explanationResponse] = await Promise.all([
-        fetch('/api/generate-mindmap', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topic: milestone.topic, details: milestone.details }),
-        }),
-        fetch('/api/generate-explanation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topic: milestone.topic, details: milestone.details }),
-        })
-      ]);
 
-      if (!mindmapResponse.ok || !explanationResponse.ok) throw new Error(`Server error`);
-
-      const mindmapResult = await mindmapResponse.json();
-      const parsedMindmap = mindmapSchema.safeParse(mindmapResult);
-      if (parsedMindmap.success) {
-        setMindmapData(parsedMindmap.data);
-      } else {
-        console.error("Zod validation error for mindmap:", parsedMindmap.error);
-      }
-      
-      const explanationResult = await explanationResponse.json();
-      const parsedExplanation = explanationSchema.safeParse(explanationResult);
-      if (parsedExplanation.success) {
-        setExplanation(parsedExplanation.data.explanation);
-      } else {
-         console.error("Zod validation error for explanation:", parsedExplanation.error);
-      }
-
-    } catch (err: any) {
-      setError(err.message || "Gagal mengambil data detail.");
-    } finally {
-      setIsModalLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault(); setIsLoading(true); setError(null); setRoadmapData(null);
-    try {
-      const response = await fetch('/api/generate-roadmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic, details }), });
-      if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
-      const data = await response.json(); const parsedData = roadmapSchema.safeParse(data);
-      if (parsedData.success) { setRoadmapData(parsedData.data); } else { throw new Error("Struktur data dari server tidak valid."); }
-    } catch (err: any) { setError(err.message); } finally { setIsLoading(false); }
-  };
-
-  const handleSaveRoadmap = async () => {
-    if (!roadmapData) {
-      alert("Tidak ada roadmap untuk disimpan!");
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/roadmaps/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: topic, // Menggunakan topik sebagai judul
-          content: roadmapData, // Menyimpan seluruh objek JSON
-        }),
-      });
-
-      if (!response.ok) throw new Error("Gagal menyimpan roadmap.");
-
-      alert("Roadmap berhasil disimpan!");
-      
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
+export default function LandingPage() {
   return (
-    <div className="flex h-screen font-sans">
-      <aside className="w-[400px] bg-white border-r border-slate-200 p-8 flex flex-col">
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">BelajarYuk</h1>
-            <p className="mt-2 text-sm text-slate-500">Jalur belajar terstruktur dengan AI.</p>
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-sm">
+        <div className="container mx-auto flex h-20 items-center justify-between px-6">
+          <Link href="/" className="text-2xl font-bold text-slate-900">
+            BelajarYuk
+          </Link>
+          <Link
+            href="/dashboard"
+            className="hidden rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:block"
+          >
+            Mulai Belajar
+          </Link>
+        </div>
+      </header>
+
+      <main className="pt-20">
+        {/* Hero Section */}
+        <section className="py-24 sm:py-32">
+          <div className="container mx-auto grid grid-cols-1 gap-12 px-6 lg:grid-cols-2 lg:items-center">
+            <div className="max-w-xl">
+              <span className="mb-4 block text-sm font-semibold uppercase tracking-wider text-blue-600">
+                Belajar Terstruktur dengan AI
+              </span>
+              <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl">
+                Ubah Topik Apapun Menjadi Jalur Belajar yang Jelas.
+              </h1>
+              <p className="mt-6 text-lg leading-8 text-slate-600">
+                Berhenti bingung harus mulai dari mana. BelajarYuk menggunakan AI untuk membuat roadmap dan mindmap interaktif, memandumu dari pemula hingga mahir.
+              </p>
+              <div className="mt-10">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-4 text-base font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Buat Roadmap Pertamamu <ArrowRight className="h-5 w-5" />
+                </Link>
+              </div>
+            </div>
+             <div className="flex items-center justify-center">
+                {/* Placeholder untuk visualisasi, bisa diganti dengan gambar atau animasi */}
+                <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
+                    <div className="h-64 rounded-lg bg-slate-100 flex items-center justify-center">
+                        <BrainCircuit className="h-24 w-24 text-blue-300" />
+                    </div>
+                    <p className="mt-4 text-center font-medium text-slate-700">Visualisasikan jalur belajarmu.</p>
+                </div>
+            </div>
           </div>
-          {/* Tambahkan komponen AuthButtons di sini */}
-          <AuthButtons />
-        </header>
-        <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-10">
-          <div className="space-y-6">
-            <div><label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1.5">Topik Utama</label><input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required/></div>
-            <div><label htmlFor="details" className="block text-sm font-medium text-slate-700 mb-1.5">Detail Tambahan <span className="text-slate-400">(Opsional)</span></label><textarea id="details" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Contoh: Saya sudah paham dasar React, target belajar 2 bulan." className="w-full h-24 px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/></div>
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="bg-white py-24 sm:py-32">
+          <div className="container mx-auto px-6">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Semua yang Kamu Butuhkan untuk Belajar Efektif
+              </h2>
+              <p className="mt-4 text-lg text-slate-600">
+                Dari gambaran besar hingga detail terkecil, kami siapkan semuanya.
+              </p>
+            </div>
+            <div className="mx-auto mt-16 grid max-w-none grid-cols-1 gap-8 sm:mt-20 md:grid-cols-2 lg:grid-cols-3">
+              <FeatureCard icon={Milestone} title="Roadmap Terstruktur">
+                Dapatkan urutan belajar langkah demi langkah yang logis, lengkap dengan estimasi waktu untuk setiap tahapan.
+              </FeatureCard>
+              <FeatureCard icon={BrainCircuit} title="Mindmap Interaktif">
+                Pahami hubungan antar konsep dengan visualisasi mindmap yang bercabang dan mudah dijelajahi.
+              </FeatureCard>
+              <FeatureCard icon={BookOpen} title="Penjelasan Mendalam">
+                Setiap sub-topik dalam roadmap bisa kamu jabarkan menjadi penjelasan materi yang komprehensif, seolah memiliki mentor pribadi.
+              </FeatureCard>
+            </div>
           </div>
-          <div className="mt-8"><button type="submit" disabled={isLoading} className="w-full px-4 py-3 font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed">{isLoading ? 'Membuat Roadmap...' : 'Buat Roadmap'}</button></div>
-        </form>
-        {error && (<div className="p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg"><strong>Oops!</strong> {error}</div>)}
-        {session && roadmapData && (
-           <div className="mt-4">
-            <button
-              onClick={handleSaveRoadmap}
-              className="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition-all duration-200"
-            >
-              Simpan Roadmap
-            </button>
-          </div>
-        )}
-      </aside>
-      <main className="relative flex-grow bg-slate-50">
-        {isLoading && (<div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm"><div className="text-center"><div className="text-lg font-semibold text-slate-700">Menganalisis & Membangun Roadmap...</div><p className="mt-1 text-sm text-slate-500">Mohon tunggu sebentar.</p></div></div>)}
-        {roadmapData ? (<RoadmapGraph data={roadmapData} onNodeClick={handleNodeClick} />) : (!isLoading && (<div className="flex items-center justify-center h-full"><div className="text-center text-slate-400"><p className="font-medium">Roadmap Anda akan muncul di sini</p><p className="mt-1 text-sm">Isi form di samping untuk memulai.</p></div></div>))}
+        </section>
+
+        {/* How It Works Section */}
+        <section className="py-24 sm:py-32">
+            <div className="container mx-auto px-6">
+                 <div className="mx-auto max-w-2xl text-center">
+                    <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                        Hanya 3 Langkah Sederhana
+                    </h2>
+                    <p className="mt-4 text-lg text-slate-600">
+                        Mulai perjalanan belajarmu dalam hitungan menit.
+                    </p>
+                </div>
+                <div className="mt-20 grid grid-cols-1 gap-12 md:grid-cols-3">
+                    <Step number="1" title="Masukkan Topik">
+                        Tuliskan apa saja yang ingin kamu pelajari, dari "Dasar-dasar Javascript" hingga "Teori Relativitas".
+                    </Step>
+                     <Step number="2" title="Generate Roadmap">
+                        Biarkan AI menganalisis dan menyusun kurikulum belajar yang paling optimal untukmu.
+                    </Step>
+                     <Step number="3" title="Mulai Belajar!">
+                        Ikuti roadmap yang ada, jabarkan materi yang sulit, dan lacak progres belajarmu dengan mudah.
+                    </Step>
+                </div>
+            </div>
+        </section>
+
+        {/* Final CTA Section */}
+        <section className="bg-white">
+            <div className="container mx-auto px-6 py-24 text-center">
+                 <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                    Siap Mengubah Cara Belajarmu?
+                </h2>
+                <p className="mt-4 text-lg text-slate-600 mx-auto max-w-2xl">
+                    Ambil kendali atas proses belajarmu. Dapatkan kejelasan dan arah dengan roadmap yang dibuat khusus untukmu.
+                </p>
+                 <div className="mt-10">
+                    <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-4 text-base font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                    Gratis, Mulai Sekarang <ArrowRight className="h-5 w-5" />
+                    </Link>
+                </div>
+            </div>
+        </section>
       </main>
-      {selectedMilestone && (
-        <MindmapModal 
-          isLoading={isModalLoading}
-          mindmapData={mindmapData}
-          explanation={explanation}
-          onClose={() => setSelectedMilestone(null)}
-          topic={selectedMilestone.topic}
-        />
-      )}
+
+      {/* Footer */}
+      <footer className="bg-slate-100">
+        <div className="container mx-auto px-6 py-8 text-center text-sm text-slate-500">
+          <p>&copy; {new Date().getFullYear()} BelajarYuk. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }

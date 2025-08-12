@@ -2,7 +2,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { FcGoogle } from "react-icons/fc"; // Install: npm install react-icons
+import { FcGoogle } from "react-icons/fc";
 
 export default function LoginCard() {
   return (
@@ -13,7 +13,8 @@ export default function LoginCard() {
       </p>
       <div className="mt-8">
         <button
-          onClick={() => signIn("google", { callbackUrl: "/" })}
+          // Mengarahkan pengguna ke dashboard setelah login berhasil
+          onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
           className="flex items-center justify-center w-full gap-3 px-4 py-3 font-semibold text-gray-700 transition-colors bg-white border rounded-lg shadow-sm border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <FcGoogle className="w-6 h-6" />
