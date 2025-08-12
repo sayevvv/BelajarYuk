@@ -3,23 +3,20 @@
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma" // <-- GANTI DENGAN INI
 
 // Ambil variabel dari environment
 const googleClientId = process.env.AUTH_GOOGLE_ID;
 const googleClientSecret = process.env.AUTH_GOOGLE_SECRET;
 
-// Lakukan validasi: pastikan variabel tersebut ada
+// Lakukan validasi
 if (!googleClientId || !googleClientSecret) {
   throw new Error("Missing Google OAuth client ID or client secret");
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma), // 'prisma' sekarang diimpor dari singleton
   providers: [
-    // Gunakan variabel yang sudah divalidasi
     Google({
       clientId: googleClientId,
       clientSecret: googleClientSecret,

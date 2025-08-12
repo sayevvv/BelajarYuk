@@ -3,16 +3,15 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./providers";
+import { Providers } from "./providers"; // 1. Impor provider
 
-// Inisialisasi font
 const geist = Geist({
   subsets: ["latin"],
   variable: "--font-geist-sans",
 });
 
 export const metadata: Metadata = {
-  title: "AI Learning Roadmap",
+  title: "BelajarYuk AI Roadmap",
   description: "Buat jalur belajar terstruktur dengan AI",
 };
 
@@ -23,8 +22,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      {/* Terapkan kelas font dan antialiased untuk rendering teks yang lebih baik */}
       <body className={`${geist.variable} font-sans antialiased`}>
+        {/* 2. Bungkus children dengan Providers */}
         <Providers>{children}</Providers>
       </body>
     </html>
