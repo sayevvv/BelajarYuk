@@ -7,6 +7,8 @@ import { z } from "zod";
 import RoadmapGraph from "@/components/RoadmapGraph";
 import MindmapGraph from "@/components/MindmapGraph";
 import { Transition } from "@headlessui/react";
+import AuthButtons from "@/components/AuthButtons";
+import { useSession } from "next-auth/react";
 
 // Skema untuk Roadmap (sudah diperbarui ke 'timeframe')
 const roadmapSchema = z.object({
@@ -85,6 +87,7 @@ const MindmapModal = ({ mindmapData, explanation, isLoading, onClose, topic }: {
 );
 
 export default function Home() {
+  const { data: session } = useSession();
   const [topic, setTopic] = useState("");
   const [details, setDetails] = useState("");
   const [roadmapData, setRoadmapData] = useState<RoadmapData | null>(null);
@@ -152,10 +155,42 @@ export default function Home() {
     } catch (err: any) { setError(err.message); } finally { setIsLoading(false); }
   };
 
+  const handleSaveRoadmap = async () => {
+    if (!roadmapData) {
+      alert("Tidak ada roadmap untuk disimpan!");
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/roadmaps/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: topic, // Menggunakan topik sebagai judul
+          content: roadmapData, // Menyimpan seluruh objek JSON
+        }),
+      });
+
+      if (!response.ok) throw new Error("Gagal menyimpan roadmap.");
+
+      alert("Roadmap berhasil disimpan!");
+      
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   return (
     <div className="flex h-screen font-sans">
       <aside className="w-[400px] bg-white border-r border-slate-200 p-8 flex flex-col">
-        <header><h1 className="text-2xl font-bold text-slate-900">BelajarYuk</h1><p className="mt-2 text-sm text-slate-500">Masukkan topik yang ingin Anda pelajari, dan biarkan AI membuatkan jalurnya untuk Anda.</p></header>
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">BelajarYuk</h1>
+            <p className="mt-2 text-sm text-slate-500">Jalur belajar terstruktur dengan AI.</p>
+          </div>
+          {/* Tambahkan komponen AuthButtons di sini */}
+          <AuthButtons />
+        </header>
         <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-10">
           <div className="space-y-6">
             <div><label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1.5">Topik Utama</label><input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required/></div>
@@ -164,6 +199,16 @@ export default function Home() {
           <div className="mt-8"><button type="submit" disabled={isLoading} className="w-full px-4 py-3 font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed">{isLoading ? 'Membuat Roadmap...' : 'Buat Roadmap'}</button></div>
         </form>
         {error && (<div className="p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg"><strong>Oops!</strong> {error}</div>)}
+        {session && roadmapData && (
+           <div className="mt-4">
+            <button
+              onClick={handleSaveRoadmap}
+              className="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition-all duration-200"
+            >
+              Simpan Roadmap
+            </button>
+          </div>
+        )}
       </aside>
       <main className="relative flex-grow bg-slate-50">
         {isLoading && (<div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm"><div className="text-center"><div className="text-lg font-semibold text-slate-700">Menganalisis & Membangun Roadmap...</div><p className="mt-1 text-sm text-slate-500">Mohon tunggu sebentar.</p></div></div>)}

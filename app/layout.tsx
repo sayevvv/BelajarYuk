@@ -1,9 +1,9 @@
 // app/layout.tsx
 
 import type { Metadata } from "next";
-// Impor font Geist Sans dan Mono
 import { Geist } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
 
 // Inisialisasi font
 const geist = Geist({
@@ -25,7 +25,7 @@ export default function RootLayout({
     <html lang="en">
       {/* Terapkan kelas font dan antialiased untuk rendering teks yang lebih baik */}
       <body className={`${geist.variable} font-sans antialiased`}>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
