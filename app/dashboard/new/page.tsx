@@ -77,6 +77,8 @@ export default function NewRoadmapPage() {
   const [finalGoal, setFinalGoal] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [showTextView, setShowTextView] = useState(false);
+  const [roadmapTitle, setRoadmapTitle] = useState('');
 
   if (status === "loading") {
     return <div className="flex h-full items-center justify-center"><p>Loading session...</p></div>
@@ -123,7 +125,23 @@ export default function NewRoadmapPage() {
       if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
       const data = await response.json();
       const parsedData = roadmapSchema.safeParse(data);
-      if (parsedData.success) { setRoadmapData(parsedData.data); } else { console.error("Validation Error:", parsedData.error); throw new Error("Struktur data dari server tidak valid."); }
+      if (parsedData.success) {
+        setRoadmapData(parsedData.data);
+        // Generate title automatically from topic and details
+        try {
+          const titleRes = await fetch('/api/generate-title', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic, details }),
+          });
+          if (titleRes.ok) {
+            const tdata = await titleRes.json();
+            if (tdata?.title) setRoadmapTitle(tdata.title);
+          }
+        } catch (e) {
+          console.warn('Gagal membuat judul otomatis, fallback ke topik.');
+        }
+      } else { console.error("Validation Error:", parsedData.error); throw new Error("Struktur data dari server tidak valid."); }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -142,7 +160,7 @@ export default function NewRoadmapPage() {
       return;
     }
     try {
-      const response = await fetch('/api/roadmaps/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: topic, content: roadmapData, }), });
+  const response = await fetch('/api/roadmaps/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: roadmapTitle || topic, content: roadmapData, }), });
       if (!response.ok) throw new Error("Gagal menyimpan roadmap.");
       alert("Roadmap berhasil disimpan!");
     } catch (err: any) {
@@ -150,15 +168,53 @@ export default function NewRoadmapPage() {
     }
   };
 
+  // Text View component to render roadmap as clickable list
+  const RoadmapTextView = ({ data, onClick }: { data: RoadmapData; onClick: (m: Milestone) => void }) => (
+    <div className="h-full overflow-y-auto p-6 sm:p-8">
+      <ol className="space-y-4">
+        {data.milestones.map((m, idx) => (
+          <li key={`${idx}-${m.topic}`}>
+            <button
+              type="button"
+              onClick={() => onClick(m)}
+              className="w-full text-left group"
+            >
+              <div className="rounded-lg border border-slate-200 bg-white p-4 hover:border-blue-400 transition-colors">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-semibold tracking-widest uppercase text-blue-600">{m.timeframe || `Tahap ${idx + 1}`}</div>
+                    <h3 className="mt-1 text-lg font-bold text-slate-900 group-hover:text-blue-700">{m.topic}</h3>
+                  </div>
+                  <div className="flex-shrink-0 text-sm text-slate-500">{m.estimated_dates || ''}</div>
+                </div>
+                {m.sub_tasks?.length ? (
+                  <ul className="mt-3 list-disc pl-5 text-sm text-slate-700 marker:text-slate-400">
+                    {m.sub_tasks.map((task, ti) => (
+                      <li key={ti} className="leading-relaxed">{task}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {m.daily_duration && (
+                  <div className="mt-3 text-xs text-slate-500">Durasi harian: {m.daily_duration}</div>
+                )}
+              </div>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+
   return (
     <div className="flex h-full">
       <AuthButtons />
-      <div className="w-[400px] bg-white p-8 flex flex-col flex-shrink-0">
+  <div className="w-[400px] bg-white p-8 flex flex-col flex-shrink-0">
         <header>
             <h1 className="text-2xl font-bold text-slate-900">Buat Rencana Baru</h1>
             <p className="mt-2 text-sm text-slate-500">Isi detail di bawah untuk memulai.</p>
         </header>
         <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
+    {/* Judul otomatis - tidak ada input manual */}
             <div className="flex p-1 mb-6 bg-slate-100 rounded-lg">
                 <button type="button" onClick={() => setPromptMode('simple')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'simple' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Simple</button>
                 <button type="button" onClick={() => setPromptMode('advanced')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'advanced' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Advanced</button>
@@ -214,13 +270,46 @@ export default function NewRoadmapPage() {
         {error && (<div className="p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg"><strong>Oops!</strong> {error}</div>)}
         {roadmapData && (<div className="mt-4"><button onClick={handleSaveRoadmap} className="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition-all duration-200">Simpan Roadmap</button></div>)}
       </div>
-      <div className="relative flex-grow bg-slate-50">
-        {/* Konten utama sekarang menggunakan placeholder */}
-        {roadmapData ? (
-          <RoadmapGraph data={roadmapData} onNodeClick={handleNodeClick} promptMode={promptMode} />
-        ) : (
-          <RoadmapPlaceholder isLoading={isLoading} />
+      <div className="relative flex-grow bg-slate-50 flex flex-col">
+        {/* Floating Toggle Button */}
+        {roadmapData && (
+          <div className="pointer-events-none absolute inset-0">
+            <div className="pointer-events-auto fixed bottom-6 right-6 z-40">
+              <button
+                type="button"
+                onClick={() => setShowTextView((v) => !v)}
+                className="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-5 py-3 shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                aria-pressed={showTextView}
+                title={showTextView ? 'Tampilkan versi grafis' : 'Tampilkan versi teks'}
+              >
+                <span className="font-semibold text-sm">{showTextView ? 'Versi Grafis' : 'Versi Teks'}</span>
+              </button>
+            </div>
+          </div>
         )}
+
+        {/* Fixed title header after roadmap exists */}
+        {roadmapData && (
+          <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
+            <div className="px-4 sm:px-6 py-3">
+              <div className="text-[11px] uppercase tracking-wider text-slate-500">Judul Roadmap</div>
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900">{roadmapTitle || topic}</h2>
+            </div>
+          </div>
+        )}
+
+        <div className="relative flex-1 overflow-hidden">
+          {/* Konten utama: Graph atau Teks */}
+          {roadmapData ? (
+            showTextView ? (
+              <RoadmapTextView data={roadmapData} onClick={handleNodeClick} />
+            ) : (
+              <RoadmapGraph data={roadmapData} onNodeClick={handleNodeClick} promptMode={promptMode} />
+            )
+          ) : (
+            <RoadmapPlaceholder isLoading={isLoading} />
+          )}
+        </div>
       </div>
       {selectedMilestone && ( <MindmapModal isLoading={isModalLoading} mindmapData={mindmapData} explanation={explanation} onClose={() => setSelectedMilestone(null)} topic={selectedMilestone.topic} /> )}
     </div>

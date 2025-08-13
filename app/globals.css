@@ -19,10 +19,45 @@
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-space-grotesk), sans-serif;
+    font-feature-settings: "kern" 1, "liga" 1, "cv01" 1, "cv02" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Terapkan font judul ke semua heading */
+  /* Terapkan font judul ke semua heading dengan Swiss typography principles */
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-crimson-pro), serif;
+    font-family: var(--font-space-grotesk), sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
+
+  /* Swiss design monospace for specific elements */
+  .font-mono {
+    font-family: var(--font-space-mono), 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+    font-feature-settings: "zero" 1, "cv01" 1;
+  }
+
+  /* Enhance readability for body text */
+  p, li {
+    line-height: 1.6;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  /* Swiss design focus on precise spacing */
+  * {
+    letter-spacing: inherit;
+  }
+}
+
+@layer utilities {
+  /* Custom Swiss design utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .tracking-tighter {
+    letter-spacing: -0.05em;
   }
 }
