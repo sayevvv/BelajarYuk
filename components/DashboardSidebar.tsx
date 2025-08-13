@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { PlusSquare, History } from 'lucide-react';
+import { PlusSquare, History, Settings as SettingsIcon, Search } from 'lucide-react';
 import Image from 'next/image';
 import logo_dark from '../public/logo/dark.png'
 import logo_light from '../public/logo/light.png'
@@ -31,16 +31,21 @@ export default function DashboardSidebar() {
   const { data: session } = useSession();
 
   return (
-    <aside className="w-20 bg-white border-r border-slate-200 p-4 flex flex-col items-center gap-4">
-      <Link href="/" title="Beranda">
-        <Image src={logo_dark} alt='logo belajar yuk'/>
-      </Link>
-      <nav className="flex flex-col gap-4 mt-4">
-        <SidebarLink href="/dashboard/new" icon={PlusSquare} label="Buat Rencana Baru" />
-        {/* Tampilkan ikon riwayat hanya jika pengguna sudah login */}
-        {session && (
-          <SidebarLink href="/dashboard/history" icon={History} label="Riwayat Roadmap" />
-        )}
+    <aside className="w-20 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4 flex flex-col items-center h-full">
+      <div className="flex flex-col items-center w-full">
+        <Link href="/" title="Beranda">
+          <Image src={logo_dark} alt='logo belajar yuk'/>
+        </Link>
+        <nav className="flex flex-col gap-4 mt-4">
+          <SidebarLink href="/dashboard/new" icon={PlusSquare} label="Buat Rencana Baru" />
+          <SidebarLink href="/dashboard/browse" icon={Search} label="Jelajahi" />
+          {session && (
+            <SidebarLink href="/dashboard/history" icon={History} label="Roadmap Saya" />
+          )}
+        </nav>
+      </div>
+      <nav className="mt-auto flex flex-col items-center gap-4">
+        <SidebarLink href="/dashboard/settings" icon={SettingsIcon} label="Settings" />
       </nav>
     </aside>
   );

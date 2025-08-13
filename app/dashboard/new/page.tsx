@@ -9,7 +9,6 @@ import MindmapGraph from "@/components/MindmapGraph";
 import RoadmapPlaceholder from "@/components/RoadmapPlaceholder"; // Impor komponen baru
 import { Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
-import AuthButtons from "@/components/AuthButtons";
 import Link from 'next/link';
 
 // --- Skema Zod ---
@@ -115,13 +114,25 @@ export default function NewRoadmapPage() {
     setIsLoading(true);
     setError(null);
     setRoadmapData(null);
-    let details = simpleDetails;
-    if (promptMode === 'advanced') {
-        const dayMapping: { [key: string]: string } = { all: 'Setiap Hari (Kerja & Akhir Pekan)', weekdays: 'Hanya Hari Kerja', weekends: 'Hanya Akhir Pekan' };
-        details = `Ketersediaan Waktu: ${dayMapping[availableDays]}. Durasi Belajar Maksimal: ${dailyDuration} jam per hari. Periode Belajar: Dari ${startDate || 'sekarang'} sampai ${endDate || 'tidak ditentukan'}. Tujuan Akhir: ${finalGoal || 'Menguasai topik secara fundamental'}.`.trim();
+    const topicToSend = (promptMode === 'simple' ? simpleDetails : topic).trim();
+    const details = (promptMode === 'advanced')
+      ? (() => {
+          const dayMapping: { [key: string]: string } = { all: 'Setiap Hari (Kerja & Akhir Pekan)', weekdays: 'Hanya Hari Kerja', weekends: 'Hanya Akhir Pekan' };
+          return `Ketersediaan Waktu: ${dayMapping[availableDays]}. Durasi Belajar Maksimal: ${dailyDuration} jam per hari. Periode Belajar: Dari ${startDate || 'sekarang'} sampai ${endDate || 'tidak ditentukan'}. Tujuan Akhir: ${finalGoal || 'Menguasai topik secara fundamental'}.`.trim();
+        })()
+      : '';
+
+    if (!topicToSend) {
+      setIsLoading(false);
+      setError('Mohon isi deskripsi topik.');
+      return;
+    }
+    if (promptMode === 'simple') {
+      // simpan juga ke state topic untuk fallback judul/simpan
+      setTopic(topicToSend);
     }
     try {
-      const response = await fetch('/api/generate-roadmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic, details, promptMode }), });
+      const response = await fetch('/api/generate-roadmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: topicToSend, details, promptMode }), });
       if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
       const data = await response.json();
       const parsedData = roadmapSchema.safeParse(data);
@@ -132,7 +143,7 @@ export default function NewRoadmapPage() {
           const titleRes = await fetch('/api/generate-title', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic, details }),
+            body: JSON.stringify({ topic: topicToSend, details }),
           });
           if (titleRes.ok) {
             const tdata = await titleRes.json();
@@ -206,31 +217,30 @@ export default function NewRoadmapPage() {
   );
 
   return (
-    <div className="flex h-full">
-      <AuthButtons />
+  <div className="flex h-full">
   <div className="w-[400px] bg-white p-8 flex flex-col flex-shrink-0">
         <header>
             <h1 className="text-2xl font-bold text-slate-900">Buat Rencana Baru</h1>
             <p className="mt-2 text-sm text-slate-500">Isi detail di bawah untuk memulai.</p>
         </header>
-        <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
-    {/* Judul otomatis - tidak ada input manual */}
-            <div className="flex p-1 mb-6 bg-slate-100 rounded-lg">
+    <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
+      {/* Pilih mode prompt */}
+      <div className="flex p-1 mb-6 bg-slate-100 rounded-lg">
                 <button type="button" onClick={() => setPromptMode('simple')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'simple' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Simple</button>
                 <button type="button" onClick={() => setPromptMode('advanced')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'advanced' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Advanced</button>
-            </div>
-            <div>
-                <label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1.5">Topik Utama</label>
-                <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required/>
             </div>
             <div className="mt-4 flex-grow overflow-y-auto pr-2">
                 {promptMode === 'simple' ? (
                     <div>
-                        <label htmlFor="details" className="block text-sm font-medium text-slate-700 mb-1.5">Detail Tambahan <span className="text-slate-400">(Opsional)</span></label>
-                        <textarea id="details" value={simpleDetails} onChange={(e) => setSimpleDetails(e.target.value)} placeholder="Contoh: Saya sudah paham dasar React." className="w-full h-24 px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+            <label htmlFor="prompt" className="block text-sm font-medium text-slate-700 mb-1.5">Apa yang ingin kamu pelajari?</label>
+            <textarea id="prompt" value={simpleDetails} onChange={(e) => setSimpleDetails(e.target.value)} required placeholder="Contoh: Belajar Next.js dari nol untuk bikin portfolio. Waktu luang 1-2 jam per hari." className="w-full h-28 px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
                     </div>
                 ) : (
                     <div className="space-y-4">
+            <div>
+              <label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1.5">Topik Utama</label>
+              <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required/>
+            </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Hari Tersedia</label>
                             <div className="grid grid-cols-3 gap-2 text-xs text-center">
@@ -271,29 +281,25 @@ export default function NewRoadmapPage() {
         {roadmapData && (<div className="mt-4"><button onClick={handleSaveRoadmap} className="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition-all duration-200">Simpan Roadmap</button></div>)}
       </div>
       <div className="relative flex-grow bg-slate-50 flex flex-col">
-        {/* Floating Toggle Button */}
-        {roadmapData && (
-          <div className="pointer-events-none absolute inset-0">
-            <div className="pointer-events-auto fixed bottom-6 right-6 z-40">
-              <button
-                type="button"
-                onClick={() => setShowTextView((v) => !v)}
-                className="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-5 py-3 shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                aria-pressed={showTextView}
-                title={showTextView ? 'Tampilkan versi grafis' : 'Tampilkan versi teks'}
-              >
-                <span className="font-semibold text-sm">{showTextView ? 'Versi Grafis' : 'Versi Teks'}</span>
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Fixed title header after roadmap exists */}
         {roadmapData && (
           <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
-            <div className="px-4 sm:px-6 py-3">
-              <div className="text-[11px] uppercase tracking-wider text-slate-500">Judul Roadmap</div>
-              <h2 className="text-lg sm:text-xl font-semibold text-slate-900">{roadmapTitle || topic}</h2>
+            <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+              <div>
+                <div className="text-[11px] uppercase tracking-wider text-slate-500">Judul Roadmap</div>
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900">{roadmapTitle || topic}</h2>
+              </div>
+              <div className="flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowTextView((v) => !v)}
+                  className="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-4 py-2 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  aria-pressed={showTextView}
+                  title={showTextView ? 'Tampilkan versi grafis' : 'Tampilkan versi teks'}
+                >
+                  <span className="font-semibold text-sm">{showTextView ? 'Versi Grafis' : 'Versi Teks'}</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

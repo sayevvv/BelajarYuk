@@ -2,7 +2,24 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
+import { useEffect } from "react";
+import ToastProvider from "@/components/ui/ToastProvider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("theme");
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const enableDark = saved ? saved === 'dark' : prefersDark;
+      document.documentElement.classList.toggle('dark', enableDark);
+    } catch {}
+  }, []);
+
+  return (
+    <SessionProvider>
+      <ToastProvider>
+        {children}
+      </ToastProvider>
+    </SessionProvider>
+  );
 }

@@ -18,12 +18,33 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { title, content } = body;
 
-    const newRoadmap = await prisma.roadmap.create({
+    // Pastikan user benar-benar ada di database untuk menghindari FK error
+    let userId = session.user.id as string;
+    let user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user && session.user.email) {
+      const byEmail = await prisma.user.findUnique({ where: { email: session.user.email } });
+      if (byEmail) {
+        user = byEmail;
+        userId = byEmail.id;
+      }
+    }
+    if (!user) {
+      return NextResponse.json({ error: "User not found. Please sign in again." }, { status: 401 });
+    }
+
+    const newRoadmap = await (prisma as any).roadmap.create({
       data: {
         title,
         content,
-        userId: session.user.id, // Gunakan id dari sesi yang sudah terverifikasi
+        userId, // id yang terverifikasi benar-benar ada di DB
+        progress: {
+          create: {
+            completedTasks: {},
+            percent: 0,
+          },
+        },
       },
+      include: { progress: true },
     });
 
     return NextResponse.json(newRoadmap, { status: 201 });

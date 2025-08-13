@@ -47,8 +47,8 @@ export default async function HistoryPage() {
   return (
     <div className="h-full overflow-y-auto bg-white">
       <header className="p-8 border-b border-slate-200 sticky top-0 bg-white/80 backdrop-blur-sm z-10">
-        <h1 className="text-3xl font-bold text-slate-900">Riwayat Roadmap</h1>
-        <p className="mt-1 text-slate-500">Lihat semua rencana belajar yang pernah Anda simpan.</p>
+  <h1 className="text-3xl font-bold text-slate-900">Roadmap Saya</h1>
+  <p className="mt-1 text-slate-500">Kelola semua roadmap yang Anda miliki dan kerjakan.</p>
       </header>
       <div className="p-8">
         {roadmaps.length === 0 ? (
@@ -65,7 +65,7 @@ export default async function HistoryPage() {
             {roadmaps.map((roadmap) => {
               const content = roadmap.content as unknown as RoadmapContent;
               return (
-                <div key={roadmap.id} className="bg-slate-50 p-6 rounded-xl border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer">
+                <Link href={`/dashboard/roadmaps/${roadmap.id}`} key={roadmap.id} className="block bg-slate-50 p-6 rounded-xl border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all">
                   <h3 className="font-bold text-slate-800 text-lg truncate">{roadmap.title}</h3>
                   <div className="flex items-center gap-2 text-sm text-slate-500 mt-2">
                     <Clock className="h-4 w-4" />
@@ -74,7 +74,7 @@ export default async function HistoryPage() {
                   <p className="text-sm text-slate-600 mt-4 border-t border-slate-200 pt-4">
                     <strong>Durasi:</strong> {content.duration} | <strong>Tahapan:</strong> {content.milestones.length}
                   </p>
-                </div>
+                </Link>
               );
             })}
           </div>

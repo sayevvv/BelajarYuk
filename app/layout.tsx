@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Crimson_Pro } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import AuthButtons from "@/components/AuthButtons";
 
 // Konfigurasi font Space Grotesk untuk teks utama (sans-serif)
 const spaceGrotesk = Space_Grotesk({
