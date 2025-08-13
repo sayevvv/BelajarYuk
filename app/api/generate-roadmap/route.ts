@@ -7,14 +7,16 @@ import { StructuredOutputParser } from "langchain/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 
-// PERUBAHAN 1: Ganti 'week' menjadi 'timeframe'
+// Skema Zod diperbarui untuk meminta data advanced
 const roadmapSchema = z.object({
   duration: z.string().describe("Estimasi durasi total pembelajaran, contoh: '3 Bulan', '6 Minggu'."),
   milestones: z.array(
     z.object({
-      timeframe: z.string().describe("Jangka waktu untuk milestone ini, contoh: 'Hari 1-3', 'Minggu 1', 'Minggu 2-3'."),
+      timeframe: z.string().describe("Jangka waktu yang spesifik dan realistis untuk milestone ini, contoh: 'Minggu 1', 'Minggu 2-3', '2 Akhir Pekan'."),
       topic: z.string().describe("Topik utama yang akan dipelajari pada jangka waktu tersebut."),
-      details: z.string().describe("Detail singkat atau sub-topik yang mencakup materi tersebut."),
+      sub_tasks: z.array(z.string()).describe("Daftar 3-5 tugas atau poin pembelajaran yang spesifik dan actionable untuk milestone ini."),
+      estimated_dates: z.string().describe("Estimasi rentang tanggal untuk milestone ini, contoh: '12 Agu - 18 Agu 2025'. Kosongkan jika tidak ada informasi tanggal dari pengguna."),
+      daily_duration: z.string().describe("Estimasi durasi belajar harian untuk milestone ini, contoh: '2 jam/hari'. Kosongkan jika tidak ada informasi dari pengguna."),
     })
   ).describe("Daftar milestone pembelajaran."),
 });
@@ -22,7 +24,7 @@ const roadmapSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { topic, details } = body;
+    const { topic, details, promptMode } = body;
 
     if (!topic) {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });
@@ -30,22 +32,26 @@ export async function POST(req: NextRequest) {
 
     const parser = StructuredOutputParser.fromZodSchema(roadmapSchema);
 
-    // PERUBAHAN 2: Perbarui prompt untuk meminta 'timeframe'
+    // Prompt yang diperbarui untuk menghasilkan output advanced
     const promptTemplate = new PromptTemplate({
-        template: `Anda adalah seorang ahli perancang kurikulum. Tugas Anda adalah membuat roadmap pembelajaran yang terstruktur berdasarkan permintaan pengguna.
+        template: `Anda adalah seorang ahli perancang kurikulum. Tugas Anda adalah membuat roadmap pembelajaran yang sangat detail dan realistis berdasarkan permintaan dan batasan pengguna.
 
         Analisis permintaan pengguna berikut:
         - Topik Utama: {topic}
-        - Detail Tambahan: {details}
+        - Detail dan Batasan: {details}
 
-        Lakukan proses reasoning berikut secara bertahap:
-        1.  Pahami kompleksitas topik dan detailnya.
-        2.  Perkirakan durasi total belajar yang realistis (misal: "3 Bulan").
-        3.  Pecah topik utama menjadi beberapa "milestone" atau tahapan belajar yang logis.
-        4.  Untuk setiap milestone, tentukan JANGKA WAKTU (timeframe) yang sesuai. Jangan hanya gunakan "minggu", tapi bisa juga "Hari 1-3", "Minggu 1", "Minggu 2-3", dll., tergantung pada materinya.
-        5.  Tulis topik dan detail singkat untuk setiap milestone.
-
-        Setelah selesai, hasilkan output HANYA dalam format JSON yang valid.
+        Lakukan proses reasoning berikut:
+        1.  Pahami topik utama dan tujuan akhir pengguna dari detail yang diberikan.
+        2.  Perhatikan batasan waktu yang diberikan: periode belajar, hari yang tersedia, dan durasi belajar maksimal per hari.
+        3.  Pecah topik menjadi beberapa "milestone" yang logis.
+        4.  Untuk setiap milestone:
+            a. Alokasikan **timeframe** yang realistis (misal: "Minggu 1").
+            b. Buat daftar **sub_tasks** yang spesifik dan bisa dikerjakan (3-5 poin).
+            c. Jika pengguna memberikan informasi di mode advanced, hitung dan sertakan **estimated_dates** (rentang tanggal) dan **daily_duration** (durasi harian) untuk milestone ini. Jika tidak ada informasi, biarkan kosong.
+        
+        Hasil akhir HARUS memperhitungkan semua batasan yang diberikan pengguna untuk membuat jadwal yang bisa mereka ikuti.
+        
+        Hasilkan output HANYA dalam format JSON yang valid.
         
         {format_instructions}
         

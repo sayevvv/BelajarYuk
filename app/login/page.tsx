@@ -6,20 +6,6 @@ import { redirect } from "next/navigation";
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-// Komponen ilustrasi SVG abstrak yang sesuai dengan estetika Swiss Design
-const LoginIllustration = () => (
-  <div className="w-full max-w-md" aria-hidden="true">
-    <svg width="100%" height="100%" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="400" height="400" rx="24" fill="#F1F5F9"/>
-      <circle cx="150" cy="150" r="80" fill="#3B82F6" fillOpacity="0.1"/>
-      <rect x="100" y="100" width="200" height="200" rx="12" stroke="#3B82F6" strokeWidth="4" strokeDasharray="8 8"/>
-      <path d="M120 280L280 120" stroke="#475569" strokeWidth="2" strokeLinecap="round"/>
-      <circle cx="250" cy="250" r="30" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="2"/>
-      <circle cx="250" cy="250" r="10" fill="#3B82F6"/>
-    </svg>
-  </div>
-);
-
 export default async function LoginPage() {
   const session = await getServerSession(authOptions);
 
@@ -31,7 +17,7 @@ export default async function LoginPage() {
   return (
     <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
       {/* Kolom Kiri: Form Login */}
-      <div className="flex flex-col items-center justify-center p-6 sm:p-12 relative">
+      <div className="flex flex-col items-center justify-center p-6 sm:p-12 relative bg-white">
          <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors">
             <ArrowLeft className="h-4 w-4" />
             Kembali ke Beranda
@@ -40,18 +26,22 @@ export default async function LoginPage() {
             <LoginCard />
         </div>
       </div>
-      {/* Kolom Kanan: Ilustrasi */}
-      <div className="hidden bg-slate-50 lg:flex flex-col items-center justify-center p-12 border-l border-slate-200">
-        <div className="w-full max-w-md text-center">
-            <LoginIllustration />
-            <div className="mt-8">
-                <h2 className="text-2xl font-bold text-slate-900">
-                    Strukturkan Pengetahuan Anda.
-                </h2>
-                <p className="mt-2 text-slate-600">
-                    Buat jalur belajar yang jelas dari topik apa pun dan capai tujuan Anda lebih cepat.
+      
+      {/* Kolom Kanan: Teks Tipografi dengan Gambar Latar */}
+      <div className="hidden lg:block relative">
+        <div 
+          className="absolute inset-0 bg-cover bg-center" 
+          style={{ backgroundImage: "url('/assets/login.jpg')" }}
+        />
+        <div className="relative z-10 flex h-full flex-col justify-end bg-black/40 p-12">
+            <blockquote className="text-white">
+                <p className="text-4xl font-bold leading-tight">
+                    "Satu-satunya sumber pengetahuan adalah pengalaman."
                 </p>
-            </div>
+                <footer className="mt-4 text-lg font-medium text-white/80">
+                    — Albert Einstein
+                </footer>
+            </blockquote>
         </div>
       </div>
     </div>
