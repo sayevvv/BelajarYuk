@@ -9,6 +9,7 @@ import MindmapGraph from "@/components/MindmapGraph";
 import RoadmapPlaceholder from "@/components/RoadmapPlaceholder"; // Impor komponen baru
 import { Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
+import AuthButtons from "@/components/AuthButtons";
 import Link from 'next/link';
 
 // --- Skema Zod ---
@@ -151,6 +152,7 @@ export default function NewRoadmapPage() {
 
   return (
     <div className="flex h-full">
+      <AuthButtons />
       <div className="w-[400px] bg-white p-8 flex flex-col flex-shrink-0">
         <header>
             <h1 className="text-2xl font-bold text-slate-900">Buat Rencana Baru</h1>
