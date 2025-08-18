@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { PlusSquare, History, Settings as SettingsIcon, Search } from 'lucide-react';
+import { PlusSquare, History, Settings as SettingsIcon, Search, User as UserIcon } from 'lucide-react';
 import Image from 'next/image';
 import logo_dark from '../public/logo/dark.png'
 import logo_light from '../public/logo/light.png'
@@ -29,6 +29,7 @@ const SidebarLink = ({ href, icon: Icon, label }: { href: string; icon: React.El
 
 export default function DashboardSidebar() {
   const { data: session } = useSession();
+  const pathname = usePathname();
 
   return (
     <aside className="w-20 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4 flex flex-col items-center h-full">
@@ -45,6 +46,28 @@ export default function DashboardSidebar() {
         </nav>
       </div>
       <nav className="mt-auto flex flex-col items-center gap-4">
+        {/* Profile avatar above Settings, stays in bottom group */}
+        {session && (
+          <Link
+            href="/dashboard/profile"
+            title="Profil"
+            className={`flex h-12 w-12 items-center justify-center rounded-lg transition-colors ${
+              pathname.startsWith('/dashboard/profile') ? 'bg-blue-100 text-blue-600' : 'text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            {session.user?.image ? (
+              <Image
+                src={session.user.image}
+                alt={session.user.name || 'User'}
+                width={40}
+                height={40}
+                className="rounded-full"
+              />
+            ) : (
+              <UserIcon className="h-6 w-6" />
+            )}
+          </Link>
+        )}
         <SidebarLink href="/dashboard/settings" icon={SettingsIcon} label="Settings" />
       </nav>
     </aside>

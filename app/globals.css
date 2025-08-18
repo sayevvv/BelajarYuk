@@ -60,4 +60,16 @@
   .tracking-tighter {
     letter-spacing: -0.05em;
   }
+
+  /* Floating mascot subtle animation every ~3s */
+  @keyframes mascot-bob {
+    0% { transform: translateY(0) rotate(0deg) scale(1); }
+    4% { transform: translateY(-4px) rotate(-2deg) scale(1.02); }
+    8% { transform: translateY(0) rotate(0deg) scale(1); }
+    100% { transform: translateY(0) rotate(0deg) scale(1); }
+  }
+  .animate-mascot {
+    animation: mascot-bob 3s ease-in-out infinite;
+    will-change: transform;
+  }
 }

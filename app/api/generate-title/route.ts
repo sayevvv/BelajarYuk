@@ -6,6 +6,7 @@ import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { StructuredOutputParser } from "langchain/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
+import { sanitizeString, rateLimit, getClientIp, isSameOrigin } from "@/lib/security";
 
 const titleSchema = z.object({
   title: z
@@ -17,6 +18,15 @@ const titleSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    if (!isSameOrigin(req as any)) {
+      return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+    }
+    const ip = getClientIp(req as any);
+    const rl = rateLimit(`title:${ip}`, 20, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Terlalu banyak permintaan." }, { status: 429 });
+    }
+
     const body = await req.json();
     const { topic, details } = body;
 
@@ -60,8 +70,8 @@ Keluarkan HANYA dalam JSON valid sesuai format.
     const chain = promptTemplate.pipe(model).pipe(parser);
 
     const result = await chain.invoke({
-      topic: topic,
-      details: details || "",
+      topic: sanitizeString(String(topic), { maxLen: 200 }),
+      details: details ? sanitizeString(String(details), { maxLen: 800 }) : "",
     });
 
     return NextResponse.json(result, { status: 200 });

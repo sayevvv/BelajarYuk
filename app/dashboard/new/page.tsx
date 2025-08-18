@@ -10,6 +10,7 @@ import RoadmapPlaceholder from "@/components/RoadmapPlaceholder"; // Impor kompo
 import { Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 // --- Skema Zod ---
 const roadmapSchema = z.object({
@@ -78,6 +79,12 @@ export default function NewRoadmapPage() {
   const [endDate, setEndDate] = useState('');
   const [showTextView, setShowTextView] = useState(false);
   const [roadmapTitle, setRoadmapTitle] = useState('');
+  // Chat-like AI edit state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: 'user'|'assistant'; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [useAdvancedContext, setUseAdvancedContext] = useState(false);
 
   if (status === "loading") {
     return <div className="flex h-full items-center justify-center"><p>Loading session...</p></div>
@@ -179,6 +186,41 @@ export default function NewRoadmapPage() {
     }
   };
 
+  const handleChatSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!roadmapData || !chatInput.trim()) return;
+    const userMsg = { role: 'user' as const, content: chatInput.trim() };
+    setChatMessages((m) => [...m, userMsg]);
+    setChatLoading(true);
+    try {
+      const constraints = useAdvancedContext ? { availableDays, dailyDuration, startDate, endDate, finalGoal } : undefined;
+      const res = await fetch('/api/roadmaps/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current: roadmapData,
+          instruction: chatInput.trim(),
+          promptMode: useAdvancedContext ? 'advanced' : 'simple',
+          constraints,
+        }),
+      });
+      if (!res.ok) throw new Error('Gagal mengedit roadmap');
+      const data = await res.json();
+      const parsed = roadmapSchema.safeParse(data.updated);
+      if (parsed.success) {
+        setRoadmapData(parsed.data);
+        setChatMessages((m) => [...m, { role: 'assistant', content: data.summary || 'Perubahan diterapkan.' }]);
+      } else {
+        setChatMessages((m) => [...m, { role: 'assistant', content: 'Maaf, perubahan tidak dapat diterapkan (validasi gagal).' }]);
+      }
+    } catch (err: any) {
+      setChatMessages((m) => [...m, { role: 'assistant', content: err.message || 'Terjadi kesalahan.' }]);
+    } finally {
+      setChatLoading(false);
+      setChatInput('');
+    }
+  };
+
   // Text View component to render roadmap as clickable list
   const RoadmapTextView = ({ data, onClick }: { data: RoadmapData; onClick: (m: Milestone) => void }) => (
     <div className="h-full overflow-y-auto p-6 sm:p-8">
@@ -220,7 +262,7 @@ export default function NewRoadmapPage() {
   <div className="flex h-full">
   <div className="w-[400px] bg-white p-8 flex flex-col flex-shrink-0">
         <header>
-            <h1 className="text-2xl font-bold text-slate-900">Buat Rencana Baru</h1>
+            <h1 className="text-2xl font-bold text-slate-900">Buat Roadmap Baru</h1>
             <p className="mt-2 text-sm text-slate-500">Isi detail di bawah untuk memulai.</p>
         </header>
     <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
@@ -304,7 +346,10 @@ export default function NewRoadmapPage() {
           </div>
         )}
 
-        <div className="relative flex-1 overflow-hidden">
+        <div className={cn(
+          "relative flex-1 overflow-hidden",
+          roadmapData && chatOpen ? 'lg:pr-[360px]' : ''
+        )}>
           {/* Konten utama: Graph atau Teks */}
           {roadmapData ? (
             showTextView ? (
@@ -315,8 +360,110 @@ export default function NewRoadmapPage() {
           ) : (
             <RoadmapPlaceholder isLoading={isLoading} />
           )}
+
+          {/* Desktop chat panel with smooth slide-in from right */}
+          {roadmapData && (
+            <div
+              className={cn(
+                'hidden lg:block absolute top-4 right-4 bottom-4 w-[340px] transition-transform duration-300 will-change-transform',
+                chatOpen ? 'translate-x-0' : 'translate-x-[calc(100%+1rem)]'
+              )}
+            >
+              <aside className="flex h-full flex-col bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <div className="text-sm font-semibold text-slate-800">Edit dengan AI</div>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                      <input type="checkbox" className="rounded" checked={useAdvancedContext} onChange={(e)=>setUseAdvancedContext(e.target.checked)} />
+                      Advanced
+                    </label>
+                    <button onClick={()=>setChatOpen(false)} className="text-xs text-slate-500 hover:text-slate-800">Tutup</button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                  {chatMessages.length === 0 ? (
+                    <div className="text-xs text-slate-500">Ketik instruksi, misal: "Tambahkan milestone untuk interview" atau "Selesaikan dalam 6 minggu".</div>
+                  ) : (
+                    chatMessages.map((m, i) => (
+                      <div key={i} className={cn('text-sm whitespace-pre-wrap', m.role === 'assistant' ? 'text-slate-700' : 'text-slate-900')}>{m.content}</div>
+                    ))
+                  )}
+                  {chatLoading && <div className="text-xs text-slate-500">Menerapkan perubahan…</div>}
+                </div>
+                <form onSubmit={handleChatSubmit} className="border-t border-slate-200 p-3 flex items-center gap-2">
+                  <input
+                    value={chatInput}
+                    onChange={(e)=>setChatInput(e.target.value)}
+                    placeholder="Tulis instruksi edit…"
+                    className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button disabled={chatLoading || !chatInput.trim()} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium disabled:bg-slate-400">
+                    Kirim
+                  </button>
+                </form>
+              </aside>
+            </div>
+          )}
         </div>
       </div>
+      {/* Floating toggle button (desktop & mobile) */}
+      {roadmapData && (
+        <button
+          type="button"
+          onClick={() => setChatOpen((v)=>!v)}
+          aria-label="Toggle Edit AI"
+          className={cn(
+            'fixed bottom-5 right-5 z-30 rounded-full bg-white border border-slate-200 shadow-lg p-2 hover:shadow-xl transition-all',
+            chatOpen ? 'ring-2 ring-blue-400' : 'ring-0'
+          )}
+        >
+          <span className="sr-only">Edit dengan AI</span>
+          <img
+            src="/assets/placeholder_edit.png"
+            alt="Maskot Edit AI"
+            className="h-14 w-14 object-contain animate-mascot"
+            draggable={false}
+          />
+        </button>
+      )}
+      {/* Mobile chat overlay */}
+      {roadmapData && chatOpen && (
+        <div className="lg:hidden fixed inset-0 z-20 bg-black/50 backdrop-blur-sm">
+          <div className="absolute inset-x-3 bottom-3 top-16 rounded-2xl bg-white shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <div className="text-sm font-semibold text-slate-800">Edit dengan AI</div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                  <input type="checkbox" className="rounded" checked={useAdvancedContext} onChange={(e)=>setUseAdvancedContext(e.target.checked)} />
+                  Advanced
+                </label>
+                <button onClick={()=>setChatOpen(false)} className="text-slate-500 hover:text-slate-800 text-sm">Tutup</button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              {chatMessages.length === 0 ? (
+                <div className="text-xs text-slate-500">Ketik instruksi, misal: "Perjelas sub-tugas minggu 1".</div>
+              ) : (
+                chatMessages.map((m, i) => (
+                  <div key={i} className={cn('text-sm whitespace-pre-wrap', m.role === 'assistant' ? 'text-slate-700' : 'text-slate-900')}>{m.content}</div>
+                ))
+              )}
+              {chatLoading && <div className="text-xs text-slate-500">Menerapkan perubahan…</div>}
+            </div>
+            <form onSubmit={handleChatSubmit} className="border-t border-slate-200 p-3 flex items-center gap-2">
+              <input
+                value={chatInput}
+                onChange={(e)=>setChatInput(e.target.value)}
+                placeholder="Tulis instruksi edit…"
+                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button disabled={chatLoading || !chatInput.trim()} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium disabled:bg-slate-400">
+                Kirim
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       {selectedMilestone && ( <MindmapModal isLoading={isModalLoading} mindmapData={mindmapData} explanation={explanation} onClose={() => setSelectedMilestone(null)} topic={selectedMilestone.topic} /> )}
     </div>
   );
