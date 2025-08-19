@@ -1,1 +1,1 @@
-Tunggu tanggal mainnya dek.
+ready.
