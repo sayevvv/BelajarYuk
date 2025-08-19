@@ -157,7 +157,7 @@ const generateFlowElements = (milestones: Milestone[], onNodeClick: (node: Miles
   return { initialNodes, initialEdges };
 };
 
-export default function RoadmapGraph({ data, onNodeClick, promptMode }: { data: { milestones: Milestone[] }, onNodeClick: (milestone: Milestone) => void, promptMode: 'simple' | 'advanced' }) {
+export default function RoadmapGraph({ data, onNodeClick, promptMode, showMiniMap = false }: { data: { milestones: Milestone[] }, onNodeClick: (milestone: Milestone) => void, promptMode: 'simple' | 'advanced', showMiniMap?: boolean }) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
@@ -198,7 +198,9 @@ export default function RoadmapGraph({ data, onNodeClick, promptMode }: { data: 
       >
         <Background color="#e2e8f0" gap={24} />
         <Controls showInteractive={false} className="fill-slate-600 stroke-slate-600 text-slate-600" />
-        <MiniMap nodeStrokeWidth={3} zoomable pannable />
+        {showMiniMap ? (
+          <MiniMap nodeStrokeWidth={3} zoomable={false} pannable={false} />
+        ) : null}
       </ReactFlow>
     </div>
   );

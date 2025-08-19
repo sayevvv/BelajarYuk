@@ -11,10 +11,11 @@ export default function SaveRoadmapButton({ roadmapId }: { roadmapId: string }) 
   async function handleSave() {
     try {
       setLoading(true);
-      const res = await fetch(`/api/roadmaps/${roadmapId}/fork`, { method: 'POST' });
+    const res = await fetch(`/api/roadmaps/${roadmapId}/fork`, { method: 'POST' });
       if (!res.ok) {
         if (res.status === 401) {
-          router.push(`/login?callbackUrl=/r/${roadmapId}`);
+      // best-effort: go back to browse after login
+      router.push(`/login?callbackUrl=/dashboard/browse`);
           return;
         }
         const err = await res.json().catch(() => ({}));

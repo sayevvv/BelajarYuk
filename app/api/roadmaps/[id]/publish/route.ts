@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth.config";
 import { PrismaClient } from "@prisma/client";
@@ -35,9 +36,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       slug = `${base}-${i++}`;
     }
   const updated = await (prisma as any).roadmap.update({ where: { id: roadmap.id }, data: { published: true, slug, publishedAt: new Date() } });
+    // Revalidate public cache tags
+    try {
+      revalidateTag('public-roadmaps');
+      revalidateTag(`public-roadmap:${updated.slug}`);
+    } catch {}
     return NextResponse.json(updated);
   } else {
   const updated = await (prisma as any).roadmap.update({ where: { id: roadmap.id }, data: { published: false, publishedAt: null } });
+    try {
+      revalidateTag('public-roadmaps');
+      if (updated.slug) revalidateTag(`public-roadmap:${updated.slug}`);
+    } catch {}
     return NextResponse.json(updated);
   }
 }

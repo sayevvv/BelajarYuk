@@ -2,7 +2,8 @@
 
 "use client";
 
-import { useState, FormEvent, Fragment } from "react";
+import { useState, useEffect, useRef, FormEvent, Fragment } from "react";
+import { useToast } from '@/components/ui/ToastProvider';
 import { z } from "zod";
 import RoadmapGraph from "@/components/RoadmapGraph";
 import MindmapGraph from "@/components/MindmapGraph";
@@ -46,6 +47,33 @@ const explanationSchema = z.object({
 
 type Milestone = RoadmapData["milestones"][0];
 
+// Chat UI components
+const ChatBubble = ({ role, content }: { role: 'user'|'assistant'; content: string }) => {
+  const isUser = role === 'user';
+  return (
+    <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
+      <div className={cn(
+        'max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap shadow-sm',
+        isUser ? 'bg-blue-600 text-white rounded-br-md' : 'bg-slate-100 text-slate-800 rounded-bl-md'
+      )}>
+        {content}
+      </div>
+    </div>
+  );
+};
+
+const TypingBubble = () => (
+  <div className="flex justify-start">
+    <div className="bg-slate-100 text-slate-800 rounded-2xl rounded-bl-md px-3 py-2 text-sm shadow-sm">
+      <span className="inline-flex gap-1">
+        <span className="size-1.5 rounded-full bg-slate-500 animate-pulse" />
+        <span className="size-1.5 rounded-full bg-slate-500 animate-pulse [animation-delay:120ms]" />
+        <span className="size-1.5 rounded-full bg-slate-500 animate-pulse [animation-delay:240ms]" />
+      </span>
+    </div>
+  </div>
+);
+
 // --- Komponen Modal ---
 const MindmapModal = ({ mindmapData, explanation, isLoading, onClose, topic }: { 
     mindmapData: MindmapData | null, 
@@ -62,6 +90,7 @@ const MindmapModal = ({ mindmapData, explanation, isLoading, onClose, topic }: {
 // --- Komponen Halaman Buat Roadmap Baru ---
 export default function NewRoadmapPage() {
   const { data: session, status } = useSession();
+  const { show } = useToast();
   const [roadmapData, setRoadmapData] = useState<RoadmapData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,12 +108,14 @@ export default function NewRoadmapPage() {
   const [endDate, setEndDate] = useState('');
   const [showTextView, setShowTextView] = useState(false);
   const [roadmapTitle, setRoadmapTitle] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
   // Chat-like AI edit state
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: 'user'|'assistant'; content: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [useAdvancedContext, setUseAdvancedContext] = useState(false);
+  const [listKey, setListKey] = useState(0);
 
   if (status === "loading") {
     return <div className="flex h-full items-center justify-center"><p>Loading session...</p></div>
@@ -121,6 +152,7 @@ export default function NewRoadmapPage() {
     setIsLoading(true);
     setError(null);
     setRoadmapData(null);
+  setIsSaved(false);
     const topicToSend = (promptMode === 'simple' ? simpleDetails : topic).trim();
     const details = (promptMode === 'advanced')
       ? (() => {
@@ -145,6 +177,7 @@ export default function NewRoadmapPage() {
       const parsedData = roadmapSchema.safeParse(data);
       if (parsedData.success) {
         setRoadmapData(parsedData.data);
+  setIsSaved(false);
         // Generate title automatically from topic and details
         try {
           const titleRes = await fetch('/api/generate-title', {
@@ -169,20 +202,22 @@ export default function NewRoadmapPage() {
 
   const handleSaveRoadmap = async () => {
     if (!session) {
-      alert("Silakan login untuk menyimpan roadmap Anda.");
+  show({ type: 'info', title: 'Perlu Login', message: 'Silakan login untuk menyimpan roadmap Anda.' });
       window.location.href = '/login?callbackUrl=/dashboard/new';
       return;
     }
     if (!roadmapData) {
-      alert("Tidak ada roadmap untuk disimpan!");
+  show({ type: 'error', title: 'Tidak Bisa Menyimpan', message: 'Tidak ada roadmap untuk disimpan!' });
       return;
     }
     try {
   const response = await fetch('/api/roadmaps/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: roadmapTitle || topic, content: roadmapData, }), });
       if (!response.ok) throw new Error("Gagal menyimpan roadmap.");
-      alert("Roadmap berhasil disimpan!");
+  show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan!' });
+  setIsSaved(true);
     } catch (err: any) {
       setError(err.message);
+  show({ type: 'error', title: 'Gagal Menyimpan', message: err.message || 'Terjadi kesalahan.' });
     }
   };
 
@@ -218,8 +253,75 @@ export default function NewRoadmapPage() {
     } finally {
       setChatLoading(false);
       setChatInput('');
+      setListKey((k) => k + 1);
     }
   };
+
+  // Unsaved changes guard: beforeunload + internal navigation interception
+  const hasUnsaved = !!(
+    // inputs typed
+    simpleDetails.trim() || topic.trim() || finalGoal.trim() || startDate || endDate ||
+    // adjustments chosen
+    promptMode === 'advanced' || availableDays !== 'all' || dailyDuration !== 2 ||
+    // generated but not saved
+    (roadmapData && !isSaved)
+  );
+
+  const currentUrlRef = useRef<string>('');
+  useEffect(() => {
+    currentUrlRef.current = window.location.href;
+  }, []);
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!hasUnsaved) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    // Intercept anchor clicks for client-side navigations
+    const onDocumentClick = (e: MouseEvent) => {
+      if (!hasUnsaved) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const anchor = target.closest('a') as HTMLAnchorElement | null;
+      if (!anchor) return;
+      if (anchor.target && anchor.target !== '_self') return; // allow new tab/window
+      const href = anchor.getAttribute('href') || '';
+      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+      // Same-page Link with no real navigation
+      const url = new URL(href, window.location.origin);
+      const same = url.pathname === window.location.pathname && url.search === window.location.search && url.hash === window.location.hash;
+      if (same) return;
+      const ok = window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
+      if (!ok) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    document.addEventListener('click', onDocumentClick, true);
+
+    // Handle browser back/forward
+    const onPopState = (e: PopStateEvent) => {
+      if (!hasUnsaved) return;
+      const ok = window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
+      if (!ok) {
+        // revert to current URL
+        history.pushState(null, '', currentUrlRef.current);
+      } else {
+        // allow: update ref to new URL
+        currentUrlRef.current = window.location.href;
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('click', onDocumentClick, true);
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [hasUnsaved]);
 
   // Text View component to render roadmap as clickable list
   const RoadmapTextView = ({ data, onClick }: { data: RoadmapData; onClick: (m: Milestone) => void }) => (
@@ -380,15 +482,15 @@ export default function NewRoadmapPage() {
                     <button onClick={()=>setChatOpen(false)} className="text-xs text-slate-500 hover:text-slate-800">Tutup</button>
                   </div>
                 </div>
-                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                <div key={listKey} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
                   {chatMessages.length === 0 ? (
                     <div className="text-xs text-slate-500">Ketik instruksi, misal: "Tambahkan milestone untuk interview" atau "Selesaikan dalam 6 minggu".</div>
                   ) : (
                     chatMessages.map((m, i) => (
-                      <div key={i} className={cn('text-sm whitespace-pre-wrap', m.role === 'assistant' ? 'text-slate-700' : 'text-slate-900')}>{m.content}</div>
+                      <ChatBubble key={i} role={m.role} content={m.content} />
                     ))
                   )}
-                  {chatLoading && <div className="text-xs text-slate-500">Menerapkan perubahan…</div>}
+                  {chatLoading && <TypingBubble />}
                 </div>
                 <form onSubmit={handleChatSubmit} className="border-t border-slate-200 p-3 flex items-center gap-2">
                   <input
@@ -440,15 +542,15 @@ export default function NewRoadmapPage() {
                 <button onClick={()=>setChatOpen(false)} className="text-slate-500 hover:text-slate-800 text-sm">Tutup</button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            <div key={`m-${listKey}`} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
               {chatMessages.length === 0 ? (
                 <div className="text-xs text-slate-500">Ketik instruksi, misal: "Perjelas sub-tugas minggu 1".</div>
               ) : (
                 chatMessages.map((m, i) => (
-                  <div key={i} className={cn('text-sm whitespace-pre-wrap', m.role === 'assistant' ? 'text-slate-700' : 'text-slate-900')}>{m.content}</div>
+                  <ChatBubble key={i} role={m.role} content={m.content} />
                 ))
               )}
-              {chatLoading && <div className="text-xs text-slate-500">Menerapkan perubahan…</div>}
+              {chatLoading && <TypingBubble />}
             </div>
             <form onSubmit={handleChatSubmit} className="border-t border-slate-200 p-3 flex items-center gap-2">
               <input

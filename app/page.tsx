@@ -1,10 +1,12 @@
 // app/page.tsx (Swiss Design Landing Page)
 import Link from 'next/link';
-import { ArrowRight, Grid3X3, BookOpen, BarChart3, Users, Search } from 'lucide-react';
+import { ArrowRight, Grid3X3, BookOpen, BarChart3, Users } from 'lucide-react';
 import { Space_Mono } from 'next/font/google';
 import { prisma } from '@/lib/prisma';
 import LandingHeader from '@/components/LandingHeader';
 import { MacbookScroll } from '@/components/ui/macbook-scroll';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/auth.config';
 
 // Swiss design monospace font for accents
 const spaceMono = Space_Mono({
@@ -17,24 +19,14 @@ const spaceMono = Space_Mono({
 const MetricCard = ({ number, label, delay = 0 }: { number: string; label: string; delay?: number }) => (
   <div className={`${spaceMono.variable}`} style={{ animationDelay: `${delay}ms` }}>
     <div className="border-l-2 border-slate-900 pl-6">
-      <div className="font-mono text-3xl font-bold text-slate-900 tracking-tight">{number}</div>
-      <div className="text-sm uppercase tracking-wide text-slate-600 mt-1">{label}</div>
+      <div className="font-mono text-3xl font-bold text-slate-900 tracking-tight dark:text-slate-100">{number}</div>
+      <div className="text-sm uppercase tracking-wide text-slate-600 mt-1 dark:text-slate-400">{label}</div>
     </div>
   </div>
 );
 
 // Swiss-style feature component with minimal design
-const FeatureBlock = ({ 
-  icon: Icon, 
-  title, 
-  description, 
-  number 
-}: { 
-  icon: React.ElementType; 
-  title: string; 
-  description: string; 
-  number: string;
-}) => (
+const FeatureBlock = ({ icon: Icon, title, description, number }: { icon: React.ElementType; title: string; description: string; number: string; }) => (
   <div className="group">
     <div className="flex items-start gap-4">
       <div className="flex-shrink-0">
@@ -43,53 +35,66 @@ const FeatureBlock = ({
         </div>
       </div>
       <div className="flex-1">
-        <div className={`text-xs uppercase tracking-wider text-slate-500 mb-2 ${spaceMono.variable} font-mono`}>
+        <div className={`text-xs uppercase tracking-wider text-slate-500 mb-2 ${spaceMono.variable} font-mono dark:text-slate-400`}>
           {number}
         </div>
-        <h3 className="text-xl font-bold text-slate-900 mb-3">{title}</h3>
-        <p className="text-slate-600 leading-relaxed">{description}</p>
+        <h3 className="text-xl font-bold text-slate-900 mb-3 dark:text-slate-100">{title}</h3>
+        <p className="text-slate-600 leading-relaxed dark:text-slate-300">{description}</p>
       </div>
     </div>
   </div>
 );
 
 export default async function LandingPage() {
-  // Fetch a small set of latest published roadmaps to showcase on landing
+  const session = await getServerSession(authOptions as any);
+  const s: any = session || {};
   const latest = await (prisma as any).roadmap.findMany({
     where: { published: true },
     orderBy: { publishedAt: 'desc' },
-    take: 6,
+    take: 12,
     select: { id: true, slug: true, title: true, user: { select: { name: true } }, content: true },
   });
+
+  const hasLatest = Array.isArray(latest) && latest.length > 0;
+  const placeholders = [
+    { id: 'p1', slug: 'sample-web-dev', title: 'Beginner Web Development Roadmap', user: { name: 'Community' } },
+    { id: 'p2', slug: 'sample-data-science', title: 'Data Science Foundations', user: { name: 'Community' } },
+    { id: 'p3', slug: 'sample-mobile', title: 'Mobile App Development Basics', user: { name: 'Community' } },
+    { id: 'p4', slug: 'sample-ui-ux', title: 'UI/UX Design Starter Path', user: { name: 'Community' } },
+    { id: 'p5', slug: 'sample-devops', title: 'DevOps Essentials', user: { name: 'Community' } },
+    { id: 'p6', slug: 'sample-ml', title: 'Machine Learning 101', user: { name: 'Community' } },
+  ] as any[];
+  const marqueeItems = hasLatest ? latest : placeholders;
+
   return (
-    <div className={`min-h-screen bg-white ${spaceMono.variable}`}>
-  <LandingHeader />
+    <div className={`min-h-screen bg-white dark:bg-slate-950 ${spaceMono.variable}`}>
+      <LandingHeader />
 
       <main className="pt-16">
-        {/* Hero Section - Aceternity Macbook Scroll */}
+        {/* Hero Section */}
         <section className="relative overflow-hidden bg-white dark:bg-[#0B0B0F]">
           <MacbookScroll
             title={
-              <span>
-                <span className="block">Learn smarter,</span>
-                <span className="block">not harder.</span>
-                <span className="block mt-2 text-xs font-normal tracking-wide text-slate-500 dark:text-slate-400">Belajar sesuai kebutuhanmu</span>
+              <span className="text-slate-900 dark:text-white">
+                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">Learn smarter,</span>
+                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">not harder.</span>
+                <span className="block mt-3 text-sm sm:text-base font-normal tracking-wide text-slate-500 dark:text-slate-400">Belajar sesuai kebutuhanmu</span>
               </span>
             }
-            badge={<Badge className="h-10 w-10 -rotate-12 transform" />}
+            badge={<HeroBadge className="h-10 w-10 -rotate-12 transform" />}
             src="/assets/heroimg.jpg"
             showGradient={false}
             cta={
-              <div className="flex items-center gap-3 mb-10">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-10">
                 <a
-                  href="/dashboard"
-                  className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow hover:bg-slate-800"
+                  href={s?.user?.id ? "/dashboard/new" : "/login?callbackUrl=%2Fdashboard%2Fnew"}
+                  className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500"
                 >
-                  Get Started
+                  Start Learning
                 </a>
                 <a
                   href="#features"
-                  className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   Learn More
                 </a>
@@ -98,11 +103,52 @@ export default async function LandingPage() {
           />
         </section>
 
-  {/* Peerlist-like Badge used in hero */}
-  {/* Keep local to this page to avoid global namespace pollution */}
+        {/* Marquee */}
+        <section aria-label="Published Roadmaps" className="border-y border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="max-w-7xl mx-auto px-0 sm:px-6">
+            <div className="group pause-on-hover relative overflow-hidden py-4">
+              <div className="pointer-events-none absolute left-0 top-0 h-full w-16 bg-gradient-to-r from-white to-transparent dark:from-slate-900" />
+              <div className="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-white to-transparent dark:from-slate-900" />
+              <div className="flex w-[200%] animate-scroll-x will-change-transform">
+                <ul className="flex items-center gap-3 pr-3">
+                  {marqueeItems.map((r: any) => (
+                    <li key={`a-${r.id}`} className="shrink-0">
+                      <Link
+                        href={hasLatest ? `/r/${r.slug}` : `/dashboard/browse`}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+                      >
+                        <span className="font-semibold truncate max-w-[16rem]">{r.title}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">• by {r.user?.name ?? 'Community'}</span>
+                        {!hasLatest && (
+                          <span className="ml-1 rounded bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-700 dark:text-slate-200">Sample</span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <ul className="flex items-center gap-3 pr-3" aria-hidden="true">
+                  {marqueeItems.map((r: any) => (
+                    <li key={`b-${r.id}`} className="shrink-0">
+                      <Link
+                        href={hasLatest ? `/r/${r.slug}` : `/dashboard/browse`}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+                      >
+                        <span className="font-semibold truncate max-w-[16rem]">{r.title}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">• by {r.user?.name ?? 'Community'}</span>
+                        {!hasLatest && (
+                          <span className="ml-1 rounded bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-700 dark:text-slate-200">Sample</span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        {/* Metrics Section - Swiss Grid */}
-        <section id="metrics" className="py-16 bg-slate-50">
+        {/* Metrics */}
+        <section id="metrics" className="py-16 bg-slate-50 dark:bg-slate-900">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               <MetricCard number="10K+" label="Active Learners" delay={0} />
@@ -112,50 +158,96 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* Features Section - Swiss Functional Design */}
-  <section id="features" className="py-24 sm:py-32">
+        {/* Features */}
+        <section id="features" className="py-24 sm:py-32 scroll-mt-28">
           <div className="max-w-7xl mx-auto px-6">
-            {/* Section Header */}
-            <div className="mb-20">
-              <div className={`text-xs uppercase tracking-wider text-slate-500 mb-4 font-mono`}>
-                Core Features
-              </div>
-              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight max-w-3xl">
-                Everything you need to accelerate your learning journey
+            <div className="mb-16">
+              <p className={`text-xs uppercase tracking-wider text-slate-500 mb-3 font-mono dark:text-slate-400`}>Core Features</p>
+              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight max-w-4xl dark:text-slate-100">
+                Ship faster from “I want to learn X” to a clear, achievable plan
               </h2>
+              <p className="mt-4 text-slate-600 dark:text-slate-300 max-w-2xl">
+                We combine AI planning, visual thinking, and progress tracking so you can focus on learning—not logistics.
+              </p>
             </div>
-            
-            {/* Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 lg:gap-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
               <FeatureBlock
                 icon={Grid3X3}
                 number="01"
                 title="AI-Powered Roadmaps"
-                description="Generate comprehensive learning paths tailored to your goals, skill level, and preferred learning style using advanced AI algorithms."
+                description="Generate a step-by-step plan tailored to your goals, starting point, and available time. Edit it anytime with natural language."
               />
               <FeatureBlock
                 icon={BookOpen}
                 number="02"
                 title="Interactive Mindmaps"
-                description="Visualize complex topics with dynamic, interactive mindmaps that help you understand connections and retain information better."
+                description="Turn complex topics into interactive maps. Collapse sections, add notes, and attach resources to keep context in one place."
               />
               <FeatureBlock
                 icon={BarChart3}
                 number="03"
-                title="Progress Tracking"
-                description="Monitor your learning progress with detailed analytics and insights that help you stay motivated and on track."
+                title="Progress & Reflection"
+                description="Mark milestones, log reflections, and get nudges when you’re stuck. Weekly summaries help you see progress over time."
               />
               <FeatureBlock
                 icon={Users}
                 number="04"
-                title="Collaborative Learning"
-                description="Share roadmaps and mindmaps with peers, get feedback, and learn together in a supportive community environment."
+                title="Sharing & Review"
+                description="Publish your roadmap, invite feedback, or fork others’ plans. Learn together with lightweight collaboration."
               />
+            </div>
+
+            {/* Best practice callouts */}
+            <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Clarity by default</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Structured milestones, short descriptions, and scoped tasks keep you moving without overwhelm.</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Evidence-based pacing</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">We encourage spaced practice and reflection so skills stick, not just pass a checklist.</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Own your data</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Export roadmaps and history anytime. Your learning, your control.</p>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Process Section - Swiss Information Design */}
+        {/* About */}
+        <section id="about" className="py-32 sm:py-40 border-t border-slate-200 dark:border-slate-800 scroll-mt-28">
+          <div className="max-w-7xl mx-auto px-6 py-16 lg:py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+            <div>
+              <p className={`text-xs uppercase tracking-wider text-slate-500 mb-3 font-mono dark:text-slate-400`}>About</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">Why we built BelajarYuk</h2>
+              <p className="mt-5 text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                Most learners quit not because topics are impossible, but because the path is unclear. BelajarYuk turns goals into
+                concrete, visual plans—then keeps you accountable with gentle progress cues and easy editing.
+              </p>
+              <p className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                We design for clarity, momentum, and community. Whether you’re switching careers or sharpening one skill, our tools
+                keep you focused on what matters next.
+              </p>
+            </div>
+            <div>
+              <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Principles we follow</h3>
+                <ul className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-300 list-disc pl-5">
+                  <li>Start with a clear end-state; work backward to milestones.</li>
+                  <li>Reduce cognitive load with visual structure and simple controls.</li>
+                  <li>Encourage reflection and iteration—plans should evolve.</li>
+                  <li>Respect privacy and portability; you own your learning data.</li>
+                </ul>
+                <div className="mt-6 rounded-lg bg-slate-50 p-4 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  Tip: Review your roadmap weekly. Adjust scope, add notes from what you learned, and celebrate progress.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Process */}
         <section className="py-24 bg-slate-900 text-white">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
@@ -204,22 +296,22 @@ export default async function LandingPage() {
               </div>
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500"></div>
-                <div className="relative p-8 bg-white text-slate-900">
-                  <div className={`text-xs uppercase tracking-wider text-slate-500 mb-4 font-mono`}>
+                <div className="relative p-8 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                  <div className={`text-xs uppercase tracking-wider text-slate-500 mb-4 font-mono dark:text-slate-400`}>
                     Sample Output
                   </div>
                   <div className="space-y-4">
                     <div className="border-l-2 border-slate-900 pl-4">
                       <div className="font-bold">Week 1-2: Fundamentals</div>
-                      <div className="text-sm text-slate-600">Basic concepts and principles</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Basic concepts and principles</div>
                     </div>
                     <div className="border-l-2 border-slate-300 pl-4">
                       <div className="font-bold">Week 3-4: Practical Application</div>
-                      <div className="text-sm text-slate-600">Hands-on projects and exercises</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Hands-on projects and exercises</div>
                     </div>
                     <div className="border-l-2 border-slate-300 pl-4">
                       <div className="font-bold">Week 5-6: Advanced Topics</div>
-                      <div className="text-sm text-slate-600">Deep dive into complex subjects</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Deep dive into complex subjects</div>
                     </div>
                   </div>
                 </div>
@@ -228,30 +320,30 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* CTA Section - Swiss Minimal Approach */}
+        {/* CTA */}
         <section className="py-24 sm:py-32">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto">
-              <div className={`text-xs uppercase tracking-wider text-slate-500 mb-6 font-mono`}>
+              <div className={`text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-6 font-mono`}>
                 Ready to Start?
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight mb-8">
+              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 leading-tight mb-8">
                 Begin your learning journey today
               </h2>
-              <p className="text-xl text-slate-600 leading-relaxed mb-12">
+              <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed mb-12">
                 Join thousands of learners who have transformed their skills with our AI-powered platform.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
-                  href="/dashboard"
-                  className="inline-flex items-center justify-center gap-3 bg-slate-900 px-8 py-4 text-white font-medium hover:bg-slate-800 transition-colors"
+                  href={s?.user?.id ? "/dashboard/new" : "/login?callbackUrl=%2Fdashboard%2Fnew"}
+                  className="inline-flex items-center justify-center gap-3 bg-slate-900 dark:bg-blue-600 px-8 py-4 text-white font-medium hover:bg-slate-800 dark:hover:bg-blue-500 transition-colors"
                 >
                   Start Learning Free
                   <ArrowRight className="h-5 w-5" />
                 </Link>
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center px-8 py-4 border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+                  className="inline-flex items-center justify-center px-8 py-4 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   Sign In
                 </Link>
@@ -261,69 +353,64 @@ export default async function LandingPage() {
         </section>
       </main>
 
-      {/* Footer - Swiss Grid System */}
-      <footer className="bg-slate-50 border-t border-slate-200">
+      {/* Footer */}
+      <footer className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-6 py-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-            {/* Brand Section */}
             <div className="lg:col-span-4">
-              <Link href="/" className="text-xl font-bold text-slate-900 tracking-tight">
+              <Link href="/" className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                 BelajarYuk
               </Link>
-              <p className="mt-4 text-slate-600 leading-relaxed max-w-sm">
+              <p className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm">
                 AI-powered learning platform that creates personalized roadmaps and interactive mindmaps for efficient skill development.
               </p>
-              <div className={`mt-6 text-xs uppercase tracking-wider text-slate-500 font-mono`}>
+              <div className={`mt-6 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono`}>
                 Made with precision
               </div>
             </div>
-            
-            {/* Links Grid */}
             <div className="lg:col-span-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-4 uppercase tracking-wide text-sm">Product</h4>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Product</h4>
                   <ul className="space-y-3 text-sm">
-                    <li><Link href="#features" className="text-slate-600 hover:text-slate-900 transition-colors">Features</Link></li>
-                    <li><Link href="#metrics" className="text-slate-600 hover:text-slate-900 transition-colors">Metrics</Link></li>
-                    <li><Link href="/dashboard" className="text-slate-600 hover:text-slate-900 transition-colors">Dashboard</Link></li>
+                    <li><Link href="#features" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Features</Link></li>
+                    <li><Link href="#metrics" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Metrics</Link></li>
+                    <li><Link href="/dashboard" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Dashboard</Link></li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-4 uppercase tracking-wide text-sm">Company</h4>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Company</h4>
                   <ul className="space-y-3 text-sm">
-                    <li><Link href="#" className="text-slate-600 hover:text-slate-900 transition-colors">About</Link></li>
-                    <li><Link href="#" className="text-slate-600 hover:text-slate-900 transition-colors">Blog</Link></li>
-                    <li><Link href="#" className="text-slate-600 hover:text-slate-900 transition-colors">Careers</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">About</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Blog</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Careers</Link></li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-4 uppercase tracking-wide text-sm">Support</h4>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Support</h4>
                   <ul className="space-y-3 text-sm">
-                    <li><Link href="#" className="text-slate-600 hover:text-slate-900 transition-colors">Help Center</Link></li>
-                    <li><Link href="#" className="text-slate-600 hover:text-slate-900 transition-colors">Contact</Link></li>
-                    <li><Link href="#" className="text-slate-600 hover:text-slate-900 transition-colors">Community</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Help Center</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Contact</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Community</Link></li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-4 uppercase tracking-wide text-sm">Legal</h4>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Legal</h4>
                   <ul className="space-y-3 text-sm">
-                    <li><Link href="#" className="text-slate-600 hover:text-slate-900 transition-colors">Privacy</Link></li>
-                    <li><Link href="#" className="text-slate-600 hover:text-slate-900 transition-colors">Terms</Link></li>
-                    <li><Link href="#" className="text-slate-600 hover:text-slate-900 transition-colors">Security</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Privacy</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Terms</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Security</Link></li>
                   </ul>
                 </div>
               </div>
             </div>
           </div>
-          
-          {/* Bottom Bar */}
-          <div className="mt-16 pt-8 border-t border-slate-200">
+          <div className="mt-16 pt-8 border-t border-slate-200 dark:border-slate-800">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className={`text-xs text-slate-500 font-mono tracking-wider`}>
+              <div className={`text-xs text-slate-500 dark:text-slate-400 font-mono tracking-wider`}>
                 © {new Date().getFullYear()} BelajarYuk. All rights reserved.
               </div>
-              <div className={`text-xs text-slate-500 font-mono tracking-wider`}>
+              <div className={`text-xs text-slate-500 dark:text-slate-400 font-mono tracking-wider`}>
                 Swiss Design Principles Applied
               </div>
             </div>
@@ -334,8 +421,8 @@ export default async function LandingPage() {
   );
 }
 
-// Local Badge icon used in hero
-const Badge = ({ className }: { className?: string }) => {
+// Local badge icon used in hero (renamed to avoid name collisions)
+const HeroBadge = ({ className }: { className?: string }) => {
   return (
     <svg
       width="24"

@@ -29,9 +29,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => { try { const saved = localStorage.getItem('theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; const enableDark = saved ? saved === 'dark' : prefersDark; const el = document.documentElement; if (enableDark) el.classList.add('dark'); else el.classList.remove('dark'); } catch {} })();`,
+          }}
+        />
+      </head>
       {/* Terapkan variabel font ke tag body */}
-      <body className={`${spaceGrotesk.variable} ${crimsonPro.variable} font-sans antialiased`}>
+      <body className={`${spaceGrotesk.variable} ${crimsonPro.variable} font-sans antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100`}>
         <Providers>
           {children}
         </Providers>

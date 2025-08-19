@@ -25,7 +25,9 @@ async function getData(params: BrowseParams) {
   if (params.page) qs.set('page', params.page);
   if (params.pageSize) qs.set('pageSize', params.pageSize);
   const base = await getBaseUrl();
-  const res = await fetch(`${base}/api/public/roadmaps${qs.toString() ? `?${qs.toString()}` : ''}`, { cache: 'no-store' });
+  const res = await fetch(`${base}/api/public/roadmaps${qs.toString() ? `?${qs.toString()}` : ''}`, {
+    next: { tags: ['public-roadmaps'] },
+  });
   return res.json();
 }
 
@@ -38,13 +40,13 @@ export default async function BrowsePage({ searchParams }: { searchParams: Brows
   const s: any = session || {};
 
   return (
-    <div className="h-full overflow-y-auto bg-white">
-      <header className="p-8 border-b border-slate-200 sticky top-0 bg-white/80 backdrop-blur-sm z-10">
-        <h1 className="text-3xl font-bold text-slate-900">Jelajahi Roadmap</h1>
-        <p className="mt-1 text-slate-500">Koleksi roadmap yang dipublikasikan pengguna.</p>
+    <div className="h-full overflow-y-auto bg-white dark:bg-slate-900">
+      <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-10">
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Jelajahi Roadmap</h1>
+        <p className="mt-1 text-slate-500 dark:text-slate-400">Koleksi roadmap yang dipublikasikan pengguna.</p>
         <form action="" className="mt-4 flex items-center gap-3">
-          <input name="q" defaultValue={q} placeholder="Cari roadmap…" className="w-full max-w-md px-3 py-2 border border-slate-300 rounded-lg" />
-          <select name="sort" defaultValue={sort} className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+          <input name="q" defaultValue={q} placeholder="Cari roadmap…" className="w-full max-w-md px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400" />
+          <select name="sort" defaultValue={sort} className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
             <option value="newest">Terbaru</option>
             <option value="oldest">Terlama</option>
             <option value="title_asc">Judul A-Z</option>
@@ -55,11 +57,11 @@ export default async function BrowsePage({ searchParams }: { searchParams: Brows
       </header>
       <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {data?.items?.map((item: any) => (
-          <div key={item.id} className="bg-slate-50 p-6 rounded-xl border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all">
+          <div key={item.id} className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all">
             <Link href={`/r/${item.slug}`} className="block">
-              <h3 className="font-bold text-slate-800 text-lg truncate">{item.title}</h3>
-              <div className="text-sm text-slate-500 mt-2">oleh {item.user?.name || 'Pengguna'}</div>
-              <p className="text-sm text-slate-600 mt-4 border-t border-slate-200 pt-4">
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg truncate">{item.title}</h3>
+              <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">oleh {item.user?.name || 'Pengguna'}</div>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mt-4 border-t border-slate-200 dark:border-slate-700 pt-4">
                 <strong>Tahapan:</strong> {item.content?.milestones?.length || 0}
               </p>
             </Link>
@@ -72,14 +74,14 @@ export default async function BrowsePage({ searchParams }: { searchParams: Brows
         ))}
       </div>
       {/* Pagination */}
-      <div className="px-8 pb-10 flex items-center justify-between text-sm text-slate-600">
+      <div className="px-8 pb-10 flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
         <div>Halaman {data?.page || page} dari {data?.totalPages || 1}</div>
         <div className="flex items-center gap-2">
           {Number(data?.page || page) > 1 ? (
-            <Link href={{ pathname: '/dashboard/browse', query: { q, sort, page: String(Number(data?.page || page) - 1), pageSize } }} className="px-3 py-1.5 rounded border border-slate-300 hover:bg-slate-50">Sebelumnya</Link>
+            <Link href={{ pathname: '/dashboard/browse', query: { q, sort, page: String(Number(data?.page || page) - 1), pageSize } }} className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Sebelumnya</Link>
           ) : <span className="px-3 py-1.5 rounded border border-transparent text-slate-400">Sebelumnya</span>}
           {Number(data?.page || page) < Number(data?.totalPages || 1) ? (
-            <Link href={{ pathname: '/dashboard/browse', query: { q, sort, page: String(Number(data?.page || page) + 1), pageSize } }} className="px-3 py-1.5 rounded border border-slate-300 hover:bg-slate-50">Berikutnya</Link>
+            <Link href={{ pathname: '/dashboard/browse', query: { q, sort, page: String(Number(data?.page || page) + 1), pageSize } }} className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Berikutnya</Link>
           ) : <span className="px-3 py-1.5 rounded border border-transparent text-slate-400">Berikutnya</span>}
         </div>
       </div>

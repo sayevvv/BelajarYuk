@@ -7,12 +7,27 @@
     --foreground: #171717;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: #0a0a0a;
-      --foreground: #ededed;
-    }
+  /* Override variables when .dark is set on the root */
+  .dark {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    color-scheme: dark;
   }
+
+  /* Dark theme bridge: map common light utilities to dark equivalents */
+  .dark .bg-white { background-color: #0f172a !important; }        /* slate-900 */
+  .dark .bg-white\/90 { background-color: #0f172a !important; }    /* override overlays */
+  .dark .bg-slate-50 { background-color: #0f172a !important; }     /* treat as surface */
+  .dark .bg-slate-100 { background-color: #1e293b !important; }    /* slate-800-ish */
+
+  .dark .border-slate-200 { border-color: #334155 !important; }    /* slate-700 */
+  .dark .border-slate-300 { border-color: #475569 !important; }    /* slate-600 */
+
+  .dark .text-slate-900 { color: #e2e8f0 !important; }             /* slate-200 */
+  .dark .text-slate-800 { color: #e2e8f0 !important; }
+  .dark .text-slate-700 { color: #cbd5e1 !important; }             /* slate-300 */
+  .dark .text-slate-600 { color: #94a3b8 !important; }             /* slate-400 */
+  .dark .text-slate-500 { color: #94a3b8 !important; }
 
   /* Terapkan font dasar ke body */
   body {
@@ -72,4 +87,23 @@
     animation: mascot-bob 3s ease-in-out infinite;
     will-change: transform;
   }
+
+    /* Marquee utilities */
+    @keyframes scroll-x {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+
+    .animate-scroll-x {
+      animation: scroll-x 30s linear infinite;
+    }
+
+    /* Allow pausing marquee on hover for accessibility */
+    .pause-on-hover:hover .animate-scroll-x {
+      animation-play-state: paused;
+    }
 }

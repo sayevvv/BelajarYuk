@@ -1,20 +1,32 @@
 // app/r/[slug]/page.tsx
-import { PrismaClient } from '@prisma/client';
 import SaveRoadmapButton from '@/components/SaveRoadmapButton';
 
-const prisma = new PrismaClient();
+async function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
+}
+
+async function getData(slug: string) {
+  const base = await getBaseUrl();
+  const res = await fetch(`${base}/api/public/roadmaps/${slug}`, {
+    next: { tags: [`public-roadmap:${slug}`] },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
 
 export default async function PublicRoadmapPage({ params }: { params: { slug: string } }) {
-  const roadmap = await (prisma as any).roadmap.findFirst({ where: { slug: params.slug, published: true }, include: { user: { select: { name: true } } } });
+  const roadmap = await getData(params.slug);
   if (!roadmap) return <div className="p-8">Tidak ditemukan.</div>;
-  const content = roadmap.content as any;
+  const content = (roadmap as any).content as any;
   return (
     <div className="h-full overflow-y-auto bg-white">
       <header className="p-8 border-b border-slate-200 sticky top-0 bg-white/80 backdrop-blur-sm z-10">
-        <h1 className="text-3xl font-bold text-slate-900">{roadmap.title}</h1>
-        <div className="mt-1 text-slate-500">oleh {roadmap.user?.name || 'Pengguna'}</div>
+        <h1 className="text-3xl font-bold text-slate-900">{(roadmap as any).title}</h1>
+        <div className="mt-1 text-slate-500">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
         <div className="mt-4">
-          <SaveRoadmapButton roadmapId={roadmap.id} />
+          <SaveRoadmapButton roadmapId={(roadmap as any).id} />
         </div>
       </header>
       <div className="p-8">
