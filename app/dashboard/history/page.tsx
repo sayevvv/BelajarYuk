@@ -45,10 +45,10 @@ export default async function HistoryPage() {
   });
 
   return (
-    <div className="h-full overflow-y-auto bg-white">
-      <header className="p-8 border-b border-slate-200 sticky top-0 bg-white/80 backdrop-blur-sm z-10">
-  <h1 className="text-3xl font-bold text-slate-900">Roadmap Saya</h1>
-  <p className="mt-1 text-slate-500">Kelola semua roadmap yang Anda miliki dan kerjakan.</p>
+    <div className="h-full overflow-y-auto bg-white dark:bg-black">
+      <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
+  <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Roadmap Saya</h1>
+  <p className="mt-1 text-slate-500 dark:text-slate-400">Kelola semua roadmap yang Anda miliki dan kerjakan.</p>
       </header>
       <div className="p-8">
         {roadmaps.length === 0 ? (

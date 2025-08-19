@@ -38,7 +38,7 @@ export default function RootLayout({
         />
       </head>
       {/* Terapkan variabel font ke tag body */}
-      <body className={`${spaceGrotesk.variable} ${crimsonPro.variable} font-sans antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100`}>
+  <body className={`${spaceGrotesk.variable} ${crimsonPro.variable} font-sans antialiased bg-white text-slate-900 dark:bg-black dark:text-neutral-200`}>
         <Providers>
           {children}
         </Providers>

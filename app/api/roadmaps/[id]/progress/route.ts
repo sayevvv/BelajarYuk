@@ -24,7 +24,8 @@ function calcPercent(content: any, completedMap: Record<string, boolean>) {
   }
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, ctx: any) {
+  const { params } = (ctx || {}) as { params: { id: string } };
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const roadmap = await (prisma as any).roadmap.findFirst({ where: { id: params.id, userId: session.user.id }, include: { progress: true } });
@@ -32,7 +33,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json(roadmap.progress);
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: any) {
+  const { params } = (ctx || {}) as { params: { id: string } };
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();

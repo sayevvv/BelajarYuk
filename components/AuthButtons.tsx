@@ -1,7 +1,7 @@
 // components/AuthButtons.tsx
 "use client";
 
-import { useState, Fragment } from "react";
+import { Fragment } from "react";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";

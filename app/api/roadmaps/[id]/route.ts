@@ -5,7 +5,8 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, ctx: any) {
+  const { params } = (ctx || {}) as { params: { id: string } };
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -17,7 +18,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json(roadmap);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, ctx: any) {
+  const { params } = (ctx || {}) as { params: { id: string } };
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

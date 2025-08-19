@@ -109,10 +109,10 @@ const generateFlowElements = (milestones: Milestone[], onNodeClick: (node: Miles
     const row = Math.floor(index / nodesPerRow);
     const col = index % nodesPerRow;
 
-    let x, y;
-    y = row * (nodeHeightForLayout + verticalSpacing);
-    if (row % 2 === 0) { x = col * (nodeWidth + horizontalSpacing); } 
-    else { x = (nodesPerRow - 1 - col) * (nodeWidth + horizontalSpacing); }
+  const y = row * (nodeHeightForLayout + verticalSpacing);
+    const x = row % 2 === 0
+      ? col * (nodeWidth + horizontalSpacing)
+      : (nodesPerRow - 1 - col) * (nodeWidth + horizontalSpacing);
 
     initialNodes.push({
       id: nodeId,

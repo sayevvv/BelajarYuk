@@ -23,8 +23,8 @@ const roadmapSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { topic, details, promptMode } = body;
+  const body = await req.json();
+  const { topic, details } = body;
 
     if (!topic) {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });

@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth.config";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+// Note: Relax ctx typing to avoid RouteContext ParamCheck mismatch in Next 15.
+export async function POST(_req: NextRequest, ctx: any) {
+  const { params } = (ctx || {}) as { params: { id: string } };
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

@@ -35,7 +35,7 @@ export default function SignupCard() {
         const data = await res.json().catch(() => ({}));
         setError(data?.error || "Gagal mendaftar.");
       }
-    } catch (err) {
+  } catch {
       setError("Terjadi kesalahan. Coba lagi.");
     } finally {
       setLoading(false);

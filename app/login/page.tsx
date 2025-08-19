@@ -31,7 +31,7 @@ export default async function LoginPage() {
   <div className="fixed top-0 left-0 right-0 z-20 h-16 flex items-center px-8">
           <Link 
             href="/" 
-            className="inline-flex items-center gap-3 text-sm font-medium text-slate-800 hover:text-slate-900 transition-all duration-200 group"
+            className="inline-flex items-center gap-3 text-sm font-medium text-slate-800 hover:text-slate-900 dark:text-neutral-300 dark:hover:text-white transition-all duration-200 group"
           >
             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
             <span className="tracking-wide">Kembali ke Beranda</span>
@@ -39,29 +39,21 @@ export default async function LoginPage() {
         </div>
 
         {/* Main Content Area - Left Side */}
-  <div className="lg:col-span-5 flex flex-col justify-center p-8 pt-24 lg:pt-24 lg:p-16 xl:p-24 overflow-y-auto lg:overflow-hidden">
-          <div className="max-w-md mx-auto lg:mx-0">
-            {/* Swiss Typography Header */}
-            <div className="mb-16">
-              <div className="mb-8">
-                <div className="text-xs uppercase tracking-wider text-slate-500 mb-4 font-mono">
-                  Akses Akun Anda
-                </div>
-                <h1 className="text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-none mb-4">
-                  Masuk
-                </h1>
-                <div className="w-16 h-1 bg-slate-900"></div>
-              </div>
-              
-              <p className="text-lg text-slate-600 leading-relaxed font-light text-balance">
-                Akses platform pembelajaran yang dirancang untuk memaksimalkan potensi Anda.
-              </p>
+  <div className="lg:col-span-5 flex flex-col justify-center p-6 pt-20 lg:p-10 xl:p-12 overflow-y-auto lg:overflow-hidden min-h-[calc(100vh-4rem)]">
+          <div className="max-w-sm mx-auto">
+            {/* Compact header */}
+            <div className="mb-6">
+              <span className="text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-400">Masuk</span>
+              <h1 className="mt-3 text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 dark:text-neutral-100">Selamat datang kembali</h1>
+              <p className="mt-2 text-sm text-slate-600 dark:text-neutral-400">Masuk untuk melanjutkan belajar.</p>
             </div>
 
             {/* Login Form */}
-            <LoginCard />
-          </div>
-        </div>
+            <div className="mt-4">
+               <LoginCard />
+             </div>
+           </div>
+         </div>
 
         {/* Right Side - Background image with rotating subjects/quotes */}
         <div className="hidden lg:block lg:col-span-7 relative overflow-hidden">

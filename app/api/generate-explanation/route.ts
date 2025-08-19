@@ -5,7 +5,6 @@ import { z } from "zod";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { StructuredOutputParser } from "langchain/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
-import { HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 
 // Skema output yang sederhana, hanya berisi teks penjelasan
 const explanationSchema = z.object({

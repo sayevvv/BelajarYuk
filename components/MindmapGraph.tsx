@@ -3,7 +3,7 @@
 "use client";
 
 import { useMemo } from 'react';
-import ReactFlow, { Background, Controls, MiniMap, Node, Edge, MarkerType, Position } from 'reactflow';
+import ReactFlow, { Background, Controls, Node, Edge, MarkerType, Position } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 

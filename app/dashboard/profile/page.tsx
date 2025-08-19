@@ -2,13 +2,30 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Pencil } from "lucide-react";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
+  // Initialize hooks first to satisfy rules-of-hooks
+  const user = session?.user as any;
+  const [displayName, setDisplayName] = useState(user?.name || "");
+  const [avatarUrl, setAvatarUrl] = useState(user?.image || "");
+  const [isOAuth, setIsOAuth] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/user/accounts')
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => { if (data && data.hasOAuth) setIsOAuth(true); })
+      .catch(() => {});
+  }, []);
 
   if (status === "loading") {
     return <div className="flex h-full items-center justify-center">Memuat profil…</div>;
@@ -26,23 +43,6 @@ export default function ProfilePage() {
     );
   }
 
-  const user = session.user;
-  const [displayName, setDisplayName] = useState(user?.name || "");
-  const [avatarUrl, setAvatarUrl] = useState(user?.image || "");
-  const [isOAuth, setIsOAuth] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [urlInput, setUrlInput] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('/api/user/accounts')
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => { if (data && data.hasOAuth) setIsOAuth(true); })
-      .catch(() => {});
-  }, []);
-
   return (
     <div className="h-full overflow-y-auto p-6">
       <div className="max-w-3xl">
@@ -52,8 +52,15 @@ export default function ProfilePage() {
         <section className="mt-6 bg-white border border-slate-200 rounded-2xl p-6 flex items-center gap-4">
           <div className="relative group h-[72px] w-[72px]">
             {avatarUrl ? (
-              // Use native img to allow arbitrary https/data URLs without Next Image domain config
-              <img src={avatarUrl} alt={user?.name || "User"} className="h-[72px] w-[72px] rounded-full object-cover" />
+              <Image
+                src={avatarUrl}
+                alt={user?.name || "User"}
+                width={72}
+                height={72}
+                className="h-[72px] w-[72px] rounded-full object-cover"
+                unoptimized={avatarUrl.startsWith('data:')}
+                priority
+              />
             ) : (
               <div className="h-[72px] w-[72px] rounded-full bg-slate-200" />
             )}

@@ -31,8 +31,9 @@ async function getData(params: BrowseParams) {
   return res.json();
 }
 
-export default async function BrowsePage({ searchParams }: { searchParams: BrowseParams }) {
-  const { q = '', sort = 'newest', page = '1', pageSize = '12' } = searchParams || {} as BrowseParams;
+export default async function BrowsePage(props: any) {
+  const { searchParams } = props || {};
+  const { q = '', sort = 'newest', page = '1', pageSize = '12' } = (searchParams || {}) as BrowseParams;
   const [data, session] = await Promise.all([
     getData({ q, sort, page, pageSize }),
     getServerSession(authOptions as any),

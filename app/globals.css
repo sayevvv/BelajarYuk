@@ -15,19 +15,23 @@
   }
 
   /* Dark theme bridge: map common light utilities to dark equivalents */
-  .dark .bg-white { background-color: #0f172a !important; }        /* slate-900 */
-  .dark .bg-white\/90 { background-color: #0f172a !important; }    /* override overlays */
-  .dark .bg-slate-50 { background-color: #0f172a !important; }     /* treat as surface */
-  .dark .bg-slate-100 { background-color: #1e293b !important; }    /* slate-800-ish */
+  /* Pure black dark mode surfaces */
+  .dark .bg-white { background-color: #000 !important; }
+  .dark .bg-white\/80 { background-color: rgba(0,0,0,0.8) !important; }
+  .dark .bg-white\/90 { background-color: rgba(0,0,0,0.9) !important; }
+  .dark .bg-slate-50 { background-color: #000 !important; }
+  .dark .bg-slate-100 { background-color: #0a0a0a !important; }
 
-  .dark .border-slate-200 { border-color: #334155 !important; }    /* slate-700 */
-  .dark .border-slate-300 { border-color: #475569 !important; }    /* slate-600 */
+  /* Neutral borders in dark */
+  .dark .border-slate-200 { border-color: #262626 !important; }
+  .dark .border-slate-300 { border-color: #404040 !important; }
 
-  .dark .text-slate-900 { color: #e2e8f0 !important; }             /* slate-200 */
-  .dark .text-slate-800 { color: #e2e8f0 !important; }
-  .dark .text-slate-700 { color: #cbd5e1 !important; }             /* slate-300 */
-  .dark .text-slate-600 { color: #94a3b8 !important; }             /* slate-400 */
-  .dark .text-slate-500 { color: #94a3b8 !important; }
+  /* Neutral text in dark */
+  .dark .text-slate-900 { color: #e5e5e5 !important; }
+  .dark .text-slate-800 { color: #e5e5e5 !important; }
+  .dark .text-slate-700 { color: #d4d4d4 !important; }
+  .dark .text-slate-600 { color: #a3a3a3 !important; }
+  .dark .text-slate-500 { color: #a3a3a3 !important; }
 
   /* Terapkan font dasar ke body */
   body {
@@ -71,6 +75,20 @@
   .text-balance {
     text-wrap: balance;
   }
+  /* Force logo swap regardless of Next/Image wrappers */
+  .logo-dark { display: block; }
+  .logo-light { display: none; }
+  .dark .logo-dark { display: none !important; }
+  .dark .logo-light { display: block !important; }
+  /* Dark mode glow effects for sidebar/links */
+  .dark .hover-text-glow:hover {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.6), 0 0 18px rgba(255, 255, 255, 0.35);
+  }
+  .dark .hover-icon-glow:hover svg {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.45));
+  }
+  /* Subtle divider for dark mode */
+  .divider-dark { border-color: #1f1f1f; }
   
   .tracking-tighter {
     letter-spacing: -0.05em;

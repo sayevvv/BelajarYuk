@@ -8,9 +8,9 @@ export default function DashboardLayout({
 }) {
   return (
     // Layout utama untuk dashboard dengan sidebar
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="flex h-screen bg-slate-50 dark:bg-black">
       <DashboardSidebar />
-      <main className="flex-1 overflow-hidden bg-white dark:bg-slate-900">
+      <main className="flex-1 overflow-hidden bg-white dark:bg-black">
         {children}
       </main>
     </div>

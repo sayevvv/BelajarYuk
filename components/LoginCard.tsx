@@ -30,8 +30,8 @@ export default function LoginCard() {
       } else {
         setError("Email atau kata sandi salah.");
       }
-    } catch (err) {
-      setError("Terjadi kesalahan. Coba lagi.");
+  } catch {
+          setError("Terjadi kesalahan. Coba lagi.");
     } finally {
       setLoading(false);
     }

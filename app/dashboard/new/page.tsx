@@ -10,7 +10,6 @@ import MindmapGraph from "@/components/MindmapGraph";
 import RoadmapPlaceholder from "@/components/RoadmapPlaceholder"; // Impor komponen baru
 import { Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 // --- Skema Zod ---
@@ -117,9 +116,7 @@ export default function NewRoadmapPage() {
   const [useAdvancedContext, setUseAdvancedContext] = useState(false);
   const [listKey, setListKey] = useState(0);
 
-  if (status === "loading") {
-    return <div className="flex h-full items-center justify-center"><p>Loading session...</p></div>
-  }
+  const isSessionLoading = status === "loading";
 
   const handleNodeClick = async (milestone: Milestone) => {
     setSelectedMilestone(milestone);
@@ -189,7 +186,7 @@ export default function NewRoadmapPage() {
             const tdata = await titleRes.json();
             if (tdata?.title) setRoadmapTitle(tdata.title);
           }
-        } catch (e) {
+  } catch {
           console.warn('Gagal membuat judul otomatis, fallback ke topik.');
         }
       } else { console.error("Validation Error:", parsedData.error); throw new Error("Struktur data dari server tidak valid."); }
@@ -244,6 +241,7 @@ export default function NewRoadmapPage() {
       const parsed = roadmapSchema.safeParse(data.updated);
       if (parsed.success) {
         setRoadmapData(parsed.data);
+        setIsSaved(false); // any edit makes it unsaved again
         setChatMessages((m) => [...m, { role: 'assistant', content: data.summary || 'Perubahan diterapkan.' }]);
       } else {
         setChatMessages((m) => [...m, { role: 'assistant', content: 'Maaf, perubahan tidak dapat diterapkan (validasi gagal).' }]);
@@ -258,13 +256,12 @@ export default function NewRoadmapPage() {
   };
 
   // Unsaved changes guard: beforeunload + internal navigation interception
-  const hasUnsaved = !!(
-    // inputs typed
+  const hasUnsaved = !isSaved && !!(
+    // inputs typed or options changed
     simpleDetails.trim() || topic.trim() || finalGoal.trim() || startDate || endDate ||
-    // adjustments chosen
     promptMode === 'advanced' || availableDays !== 'all' || dailyDuration !== 2 ||
-    // generated but not saved
-    (roadmapData && !isSaved)
+    // has roadmap content not saved in this session yet
+    roadmapData
   );
 
   const currentUrlRef = useRef<string>('');
@@ -303,7 +300,7 @@ export default function NewRoadmapPage() {
     document.addEventListener('click', onDocumentClick, true);
 
     // Handle browser back/forward
-    const onPopState = (e: PopStateEvent) => {
+  const onPopState = () => {
       if (!hasUnsaved) return;
       const ok = window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
       if (!ok) {
@@ -361,11 +358,14 @@ export default function NewRoadmapPage() {
   );
 
   return (
+    isSessionLoading ? (
+      <div className="flex h-full items-center justify-center"><p>Loading session...</p></div>
+    ) : (
   <div className="flex h-full">
-  <div className="w-[400px] bg-white p-8 flex flex-col flex-shrink-0">
+  <div className="w-[400px] bg-white dark:bg-black p-8 flex flex-col flex-shrink-0 border-r border-slate-200 dark:border-slate-800">
         <header>
-            <h1 className="text-2xl font-bold text-slate-900">Buat Roadmap Baru</h1>
-            <p className="mt-2 text-sm text-slate-500">Isi detail di bawah untuk memulai.</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Buat Roadmap Baru</h1>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Isi detail di bawah untuk memulai.</p>
         </header>
     <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
       {/* Pilih mode prompt */}
@@ -424,14 +424,14 @@ export default function NewRoadmapPage() {
         {error && (<div className="p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg"><strong>Oops!</strong> {error}</div>)}
         {roadmapData && (<div className="mt-4"><button onClick={handleSaveRoadmap} className="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition-all duration-200">Simpan Roadmap</button></div>)}
       </div>
-      <div className="relative flex-grow bg-slate-50 flex flex-col">
+  <div className="relative flex-grow bg-slate-50 dark:bg-black flex flex-col">
         {/* Fixed title header after roadmap exists */}
         {roadmapData && (
-          <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
+          <div className="sticky top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur border-b border-slate-200 dark:border-slate-800">
             <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
               <div>
-                <div className="text-[11px] uppercase tracking-wider text-slate-500">Judul Roadmap</div>
-                <h2 className="text-lg sm:text-xl font-semibold text-slate-900">{roadmapTitle || topic}</h2>
+                <div className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Judul Roadmap</div>
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100">{roadmapTitle || topic}</h2>
               </div>
               <div className="flex-shrink-0">
                 <button
@@ -471,20 +471,20 @@ export default function NewRoadmapPage() {
                 chatOpen ? 'translate-x-0' : 'translate-x-[calc(100%+1rem)]'
               )}
             >
-              <aside className="flex h-full flex-col bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+              <aside className="flex h-full flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
                 <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                  <div className="text-sm font-semibold text-slate-800">Edit dengan AI</div>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">Edit dengan AI</div>
                   <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                    <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                       <input type="checkbox" className="rounded" checked={useAdvancedContext} onChange={(e)=>setUseAdvancedContext(e.target.checked)} />
                       Advanced
                     </label>
-                    <button onClick={()=>setChatOpen(false)} className="text-xs text-slate-500 hover:text-slate-800">Tutup</button>
+                    <button onClick={()=>setChatOpen(false)} className="text-xs text-slate-500 hover:text-slate-300 dark:hover:text-white">Tutup</button>
                   </div>
                 </div>
                 <div key={listKey} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
                   {chatMessages.length === 0 ? (
-                    <div className="text-xs text-slate-500">Ketik instruksi, misal: "Tambahkan milestone untuk interview" atau "Selesaikan dalam 6 minggu".</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Ketik instruksi, misal: &quot;Tambahkan milestone untuk interview&quot; atau &quot;Selesaikan dalam 6 minggu&quot;.</div>
                   ) : (
                     chatMessages.map((m, i) => (
                       <ChatBubble key={i} role={m.role} content={m.content} />
@@ -520,6 +520,8 @@ export default function NewRoadmapPage() {
           )}
         >
           <span className="sr-only">Edit dengan AI</span>
+          {/* Using next/image for better LCP */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/assets/placeholder_edit.png"
             alt="Maskot Edit AI"
@@ -531,20 +533,20 @@ export default function NewRoadmapPage() {
       {/* Mobile chat overlay */}
       {roadmapData && chatOpen && (
         <div className="lg:hidden fixed inset-0 z-20 bg-black/50 backdrop-blur-sm">
-          <div className="absolute inset-x-3 bottom-3 top-16 rounded-2xl bg-white shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+          <div className="absolute inset-x-3 bottom-3 top-16 rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-              <div className="text-sm font-semibold text-slate-800">Edit dengan AI</div>
+              <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">Edit dengan AI</div>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-slate-600">
+                <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                   <input type="checkbox" className="rounded" checked={useAdvancedContext} onChange={(e)=>setUseAdvancedContext(e.target.checked)} />
                   Advanced
                 </label>
-                <button onClick={()=>setChatOpen(false)} className="text-slate-500 hover:text-slate-800 text-sm">Tutup</button>
+                <button onClick={()=>setChatOpen(false)} className="text-slate-500 hover:text-slate-300 dark:hover:text-white text-sm">Tutup</button>
               </div>
             </div>
             <div key={`m-${listKey}`} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
               {chatMessages.length === 0 ? (
-                <div className="text-xs text-slate-500">Ketik instruksi, misal: "Perjelas sub-tugas minggu 1".</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Ketik instruksi, misal: &quot;Perjelas sub-tugas minggu 1&quot;.</div>
               ) : (
                 chatMessages.map((m, i) => (
                   <ChatBubble key={i} role={m.role} content={m.content} />
@@ -568,5 +570,6 @@ export default function NewRoadmapPage() {
       )}
       {selectedMilestone && ( <MindmapModal isLoading={isModalLoading} mindmapData={mindmapData} explanation={explanation} onClose={() => setSelectedMilestone(null)} topic={selectedMilestone.topic} /> )}
     </div>
+    )
   );
 }

@@ -155,7 +155,8 @@ export const Lid = ({
         className="absolute inset-0 h-96 w-[32rem] rounded-2xl bg-[#010101] p-2"
       >
         <div className="absolute inset-0 rounded-lg bg-[#272729]" />
-        <img src={src as string} alt="aceternity logo" className="absolute inset-0 h-full w-full rounded-lg object-cover object-left-top" />
+  {/* eslint-disable-next-line @next/next/no-img-element */}
+  <img src={src as string} alt="aceternity logo" className="absolute inset-0 h-full w-full rounded-lg object-cover object-left-top" />
       </motion.div>
     </div>
   );

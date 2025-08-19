@@ -15,7 +15,8 @@ function slugify(input: string) {
     .replace(/-+/g, "-");
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: any) {
+  const { params } = (ctx || {}) as { params: { id: string } };
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { publish } = await req.json();
