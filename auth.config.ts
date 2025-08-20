@@ -6,6 +6,11 @@ import { prisma } from "@/lib/prisma";
 import argon2 from "argon2";
 
 export const authOptions: NextAuthOptions = {
+  // Trust proxy headers (X-Forwarded-*) on platforms like Vercel
+  // to correctly determine the host/protocol and avoid 500s.
+  // You can also set AUTH_TRUST_HOST=true in env instead of this flag.
+  // @ts-ignore - property is supported in next-auth v4.22+
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
   providers: [
     // Google OAuth (optional)
@@ -51,5 +56,6 @@ export const authOptions: NextAuthOptions = {
   },
   // Secret akan diambil dari process.env.AUTH_SECRET secara otomatis
   // oleh NextAuth, tetapi menambahkannya di sini untuk kejelasan juga baik.
-  secret: process.env.AUTH_SECRET,
+  // Dukung kedua nama env var: NEXTAUTH_SECRET (NextAuth v4) dan AUTH_SECRET (Auth.js v5)
+  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
 };
