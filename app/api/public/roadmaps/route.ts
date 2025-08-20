@@ -1,31 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Enable ISR for this route handler
 export const revalidate = 60; // seconds
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get('q') || undefined;
-  const sort = (searchParams.get('sort') || 'newest').toLowerCase();
-  const page = Math.max(Number(searchParams.get('page') || 1), 1);
-  const pageSize = Math.min(Math.max(Number(searchParams.get('pageSize') || 12), 1), 50);
-  const take = pageSize;
-  const skip = (page - 1) * pageSize;
+  try {
+    const { searchParams } = new URL(req.url);
+    const q = searchParams.get('q') || undefined;
+    const sort = (searchParams.get('sort') || 'newest').toLowerCase();
+    const page = Math.max(Number(searchParams.get('page') || 1), 1);
+    const pageSize = Math.min(Math.max(Number(searchParams.get('pageSize') || 12), 1), 50);
+    const take = pageSize;
+    const skip = (page - 1) * pageSize;
 
-  let orderBy: any = { publishedAt: 'desc' };
-  if (sort === 'oldest') orderBy = { publishedAt: 'asc' };
-  else if (sort === 'title_asc') orderBy = { title: 'asc' };
-  else if (sort === 'title_desc') orderBy = { title: 'desc' };
+    let orderBy: any = { publishedAt: 'desc' };
+    if (sort === 'oldest') orderBy = { publishedAt: 'asc' };
+    else if (sort === 'title_asc') orderBy = { title: 'asc' };
+    else if (sort === 'title_desc') orderBy = { title: 'desc' };
 
-  const where: any = { published: true, ...(q ? { title: { contains: q, mode: 'insensitive' as const } } : {}) };
-  const [items, total] = await Promise.all([
-  (prisma as any).roadmap.findMany({ where, orderBy, take, skip, select: { id: true, userId: true, title: true, slug: true, publishedAt: true, user: { select: { name: true } }, content: true } }),
-  (prisma as any).roadmap.count({ where }),
-  ]);
+    const where: any = { published: true, ...(q ? { title: { contains: q, mode: 'insensitive' as const } } : {}) };
+    const [items, total] = await Promise.all([
+      (prisma as any).roadmap.findMany({ where, orderBy, take, skip, select: { id: true, userId: true, title: true, slug: true, publishedAt: true, user: { select: { name: true } }, content: true } }),
+      (prisma as any).roadmap.count({ where }),
+    ]);
 
-  const totalPages = Math.max(Math.ceil(total / pageSize), 1);
-  return NextResponse.json({ items, total, page, pageSize, totalPages });
+    const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+    return NextResponse.json({ items, total, page, pageSize, totalPages }, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+    });
+  } catch {
+    return NextResponse.json({ items: [], total: 0, page: 1, pageSize: 12, totalPages: 1 }, {
+      headers: { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=60' },
+    });
+  }
 }

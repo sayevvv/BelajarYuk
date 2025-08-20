@@ -2,11 +2,12 @@
 import Link from 'next/link';
 import { ArrowRight, Grid3X3, BookOpen, BarChart3, Users } from 'lucide-react';
 import { Space_Mono } from 'next/font/google';
-import { prisma } from '@/lib/prisma';
+// import { prisma } from '@/lib/prisma';
 import LandingHeader from '@/components/LandingHeader';
 import { MacbookScroll } from '@/components/ui/macbook-scroll';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/auth.config';
+// import { getServerSession } from 'next-auth';
+// import { authOptions } from '@/auth.config';
+import { StartLearningCTA } from '@/components/StartLearningCTA';
 
 // Swiss design monospace font for accents
 const spaceMono = Space_Mono({
@@ -46,14 +47,19 @@ const FeatureBlock = ({ icon: Icon, title, description, number }: { icon: React.
 );
 
 export default async function LandingPage() {
-  const session = await getServerSession(authOptions as any);
-  const s: any = session || {};
-  const latest = await (prisma as any).roadmap.findMany({
-    where: { published: true },
-    orderBy: { publishedAt: 'desc' },
-    take: 12,
-    select: { id: true, slug: true, title: true, user: { select: { name: true } }, content: true },
-  });
+  // Fail-soft fetch to public API to avoid crashing landing
+  async function getLatestPublishedSafely() {
+    try {
+      const base = process.env.NEXT_PUBLIC_BASE_URL || '';
+      const res = await fetch(`${base}/api/public/roadmaps?limit=12`, { next: { revalidate: 60, tags: ['public-roadmaps'] } });
+      if (!res.ok) throw new Error('non-200');
+      const data = await res.json();
+      return Array.isArray(data.items) ? data.items : [];
+    } catch {
+      return [];
+    }
+  }
+  const latest = await getLatestPublishedSafely();
 
   const hasLatest = Array.isArray(latest) && latest.length > 0;
   const placeholders = [
@@ -86,12 +92,7 @@ export default async function LandingPage() {
             showGradient={false}
             cta={
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-10">
-                <a
-                  href={s?.user?.id ? "/dashboard/new" : "/login?callbackUrl=%2Fdashboard%2Fnew"}
-                  className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500"
-                >
-                  Start Learning
-                </a>
+                <StartLearningCTA />
                 <a
                   href="#features"
                   className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -334,12 +335,12 @@ export default async function LandingPage() {
                 Join thousands of learners who have transformed their skills with our AI-powered platform.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <StartLearningCTA className="inline-flex items-center justify-center gap-3 bg-slate-900 dark:bg-white dark:text-black px-8 py-4 text-white font-medium hover:bg-slate-800 dark:hover:bg-neutral-200 transition-colors" />
                 <Link
-                  href={s?.user?.id ? "/dashboard/new" : "/login?callbackUrl=%2Fdashboard%2Fnew"}
-                  className="inline-flex items-center justify-center gap-3 bg-slate-900 dark:bg-white dark:text-black px-8 py-4 text-white font-medium hover:bg-slate-800 dark:hover:bg-neutral-200 transition-colors"
+                  href="/login"
+                  className="inline-flex items-center justify-center px-8 py-4 border border-slate-300 dark:border-[#2a2a2a] text-slate-700 dark:text-neutral-200 font-medium hover:bg-slate-50 dark:hover:bg-[#111] transition-colors"
                 >
-                  Start Learning Free
-                  <ArrowRight className="h-5 w-5" />
+                  Sign In
                 </Link>
                 <Link
                   href="/login"
