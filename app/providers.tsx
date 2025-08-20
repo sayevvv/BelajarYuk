@@ -10,7 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem("theme");
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const enableDark = saved ? saved === 'dark' : prefersDark;
+      const enableDark = saved === 'dark' || (saved !== 'light' && prefersDark); // treat null or 'system' same as system
       document.documentElement.classList.toggle('dark', enableDark);
     } catch {}
   }, []);

@@ -11,6 +11,7 @@ import RoadmapPlaceholder from "@/components/RoadmapPlaceholder"; // Impor kompo
 import { Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
 import { cn } from '@/lib/utils';
+import { GitBranch, LayoutList } from 'lucide-react';
 
 // --- Skema Zod ---
 const roadmapSchema = z.object({
@@ -108,8 +109,7 @@ export default function NewRoadmapPage() {
   const [showTextView, setShowTextView] = useState(false);
   const [roadmapTitle, setRoadmapTitle] = useState('');
   const [isSaved, setIsSaved] = useState(false);
-  // Chat-like AI edit state
-  const [chatOpen, setChatOpen] = useState(false);
+  // Chat-like AI edit state (now lives in the left panel after roadmap exists)
   const [chatMessages, setChatMessages] = useState<{ role: 'user'|'assistant'; content: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -216,6 +216,46 @@ export default function NewRoadmapPage() {
       setError(err.message);
   show({ type: 'error', title: 'Gagal Menyimpan', message: err.message || 'Terjadi kesalahan.' });
     }
+  };
+
+  // Batalkan pembuatan/penyuntingan roadmap dan reset seluruh state ke awal
+  const handleCancel = () => {
+    const somethingToLose = !!(
+      simpleDetails.trim() || topic.trim() || finalGoal.trim() || startDate || endDate ||
+      promptMode === 'advanced' || availableDays !== 'all' || dailyDuration !== 2 ||
+      roadmapData
+    );
+    if (somethingToLose) {
+      const ok = window.confirm('Batalkan pembuatan roadmap ini? Semua perubahan akan hilang.');
+      if (!ok) return;
+    }
+    // Reset form inputs
+    setPromptMode('simple');
+    setSimpleDetails('');
+    setTopic('');
+    setAvailableDays('all');
+    setDailyDuration(2);
+    setStartDate('');
+    setEndDate('');
+    setFinalGoal('');
+    setError(null);
+    setIsLoading(false);
+    setShowTextView(false);
+    // Reset generated & chat state
+    setRoadmapData(null);
+    setRoadmapTitle('');
+    setChatMessages([]);
+    setChatInput('');
+    setChatLoading(false);
+    setUseAdvancedContext(false);
+    setListKey((k) => k + 1);
+    setSelectedMilestone(null);
+    setMindmapData(null);
+    setExplanation(null);
+    setIsModalLoading(false);
+    // Mark as saved to silence unsaved guard
+    setIsSaved(true);
+    try { show({ type: 'info', title: 'Dibatalkan', message: 'Pembuatan roadmap dibatalkan.' }); } catch {}
   };
 
   const handleChatSubmit = async (e: FormEvent) => {
@@ -363,66 +403,103 @@ export default function NewRoadmapPage() {
     ) : (
   <div className="flex h-full">
   <div className="w-[400px] bg-white dark:bg-black p-8 flex flex-col flex-shrink-0 border-r border-slate-200 dark:border-slate-800">
-        <header>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Buat Roadmap Baru</h1>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Isi detail di bawah untuk memulai.</p>
-        </header>
-    <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
-      {/* Pilih mode prompt */}
-      <div className="flex p-1 mb-6 bg-slate-100 rounded-lg">
+        {!roadmapData ? (
+          <>
+            <header>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Buat Roadmap Baru</h1>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Isi detail di bawah untuk memulai.</p>
+            </header>
+            <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
+              {/* Pilih mode prompt */}
+              <div className="flex p-1 mb-6 bg-slate-100 rounded-lg">
                 <button type="button" onClick={() => setPromptMode('simple')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'simple' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Simple</button>
                 <button type="button" onClick={() => setPromptMode('advanced')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'advanced' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Advanced</button>
-            </div>
-            <div className="mt-4 flex-grow overflow-y-auto pr-2">
+              </div>
+              <div className="mt-4 flex-grow overflow-y-auto pr-2">
                 {promptMode === 'simple' ? (
-                    <div>
-            <label htmlFor="prompt" className="block text-sm font-medium text-slate-700 mb-1.5">Apa yang ingin kamu pelajari?</label>
-            <textarea id="prompt" value={simpleDetails} onChange={(e) => setSimpleDetails(e.target.value)} required placeholder="Contoh: Belajar Next.js dari nol untuk bikin portfolio. Waktu luang 1-2 jam per hari." className="w-full h-28 px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
-                    </div>
+                  <div>
+                    <label htmlFor="prompt" className="block text-sm font-medium text-slate-700 mb-1.5">Apa yang ingin kamu pelajari?</label>
+                    <textarea id="prompt" value={simpleDetails} onChange={(e) => setSimpleDetails(e.target.value)} required placeholder="Contoh: Belajar Next.js dari nol untuk bikin portfolio. Waktu luang 1-2 jam per hari." className="w-full h-28 px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+                  </div>
                 ) : (
-                    <div className="space-y-4">
-            <div>
-              <label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1.5">Topik Utama</label>
-              <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required/>
-            </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Hari Tersedia</label>
-                            <div className="grid grid-cols-3 gap-2 text-xs text-center">
-                                <button type="button" onClick={() => setAvailableDays('all')} className={`p-2 border rounded-md ${availableDays === 'all' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Semua</button>
-                                <button type="button" onClick={() => setAvailableDays('weekdays')} className={`p-2 border rounded-md ${availableDays === 'weekdays' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Kerja</button>
-                                <button type="button" onClick={() => setAvailableDays('weekends')} className={`p-2 border rounded-md ${availableDays === 'weekends' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Akhir Pekan</button>
-                            </div>
-                        </div>
-                        <div>
-                            <label htmlFor="duration" className="block text-sm font-medium text-slate-700 mb-1.5">Durasi Belajar per Hari</label>
-                            <div className="flex items-center gap-2">
-                                <input id="duration" type="range" min="1" max="8" value={dailyDuration} onChange={(e) => setDailyDuration(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"/>
-                                <span className="text-sm font-semibold text-slate-600 w-16 text-right">{dailyDuration} jam</span>
-                            </div>
-                        </div>
-                         <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Mulai <span className="text-slate-400">(Opsional)</span></label>
-                                <input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                            </div>
-                            <div>
-                                <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Selesai <span className="text-slate-400">(Opsional)</span></label>
-                                <input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                            </div>
-                        </div>
-                        <div>
-                            <label htmlFor="goal" className="block text-sm font-medium text-slate-700 mb-1.5">Tujuan Akhir <span className="text-slate-400">(Opsional)</span></label>
-                            <input id="goal" type="text" value={finalGoal} onChange={(e) => setFinalGoal(e.target.value)} placeholder="Contoh: Lulus ujian sertifikasi" className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                        </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1.5">Topik Utama</label>
+                      <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required/>
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Hari Tersedia</label>
+                      <div className="grid grid-cols-3 gap-2 text-xs text-center">
+                        <button type="button" onClick={() => setAvailableDays('all')} className={`p-2 border rounded-md ${availableDays === 'all' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Semua</button>
+                        <button type="button" onClick={() => setAvailableDays('weekdays')} className={`p-2 border rounded-md ${availableDays === 'weekdays' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Kerja</button>
+                        <button type="button" onClick={() => setAvailableDays('weekends')} className={`p-2 border rounded-md ${availableDays === 'weekends' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Akhir Pekan</button>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="duration" className="block text-sm font-medium text-slate-700 mb-1.5">Durasi Belajar per Hari</label>
+                      <div className="flex items-center gap-2">
+                        <input id="duration" type="range" min="1" max="8" value={dailyDuration} onChange={(e) => setDailyDuration(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"/>
+                        <span className="text-sm font-semibold text-slate-600 w-16 text-right">{dailyDuration} jam</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Mulai <span className="text-slate-400">(Opsional)</span></label>
+                        <input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                      </div>
+                      <div>
+                        <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Selesai <span className="text-slate-400">(Opsional)</span></label>
+                        <input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="goal" className="block text-sm font-medium text-slate-700 mb-1.5">Tujuan Akhir <span className="text-slate-400">(Opsional)</span></label>
+                      <input id="goal" type="text" value={finalGoal} onChange={(e) => setFinalGoal(e.target.value)} placeholder="Contoh: Lulus ujian sertifikasi" className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                    </div>
+                  </div>
                 )}
-            </div>
-            <div className="mt-auto pt-6">
+              </div>
+              <div className="mt-auto pt-6">
                 <button type="submit" disabled={isLoading} className="w-full px-4 py-3 font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed">{isLoading ? 'Membuat Roadmap...' : 'Buat Roadmap'}</button>
+              </div>
+            </form>
+            {error && (<div className="p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg"><strong>Oops!</strong> {error}</div>)}
+          </>
+        ) : (
+          <>
+            <header>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Roadmap Baru</h1>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Edit dengan AI</p>
+            </header>
+            <div className="mt-4">
+              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <input type="checkbox" className="rounded" checked={useAdvancedContext} onChange={(e)=>setUseAdvancedContext(e.target.checked)} />
+                Advanced
+              </label>
             </div>
-        </form>
-        {error && (<div className="p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg"><strong>Oops!</strong> {error}</div>)}
-        {roadmapData && (<div className="mt-4"><button onClick={handleSaveRoadmap} className="w-full bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition-all duration-200">Simpan Roadmap</button></div>)}
+            <div key={listKey} className="flex-1 overflow-y-auto px-1 py-3 space-y-2">
+              {chatMessages.length === 0 ? (
+                <div className="text-xs text-slate-500 dark:text-slate-400">Ketik instruksi, misal: &quot;Tambahkan milestone untuk interview&quot; atau &quot;Selesaikan dalam 6 minggu&quot;.</div>
+              ) : (
+                chatMessages.map((m, i) => (
+                  <ChatBubble key={i} role={m.role} content={m.content} />
+                ))
+              )}
+              {chatLoading && <TypingBubble />}
+            </div>
+            <form onSubmit={handleChatSubmit} className="border-t border-slate-200 dark:border-slate-800 pt-3 flex items-center gap-2">
+              <input
+                value={chatInput}
+                onChange={(e)=>setChatInput(e.target.value)}
+                placeholder="Tulis instruksi edit…"
+                className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button disabled={chatLoading || !chatInput.trim()} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium disabled:bg-slate-400">
+                Kirim
+              </button>
+            </form>
+          </>
+        )}
       </div>
   <div className="relative flex-grow bg-slate-50 dark:bg-black flex flex-col">
         {/* Fixed title header after roadmap exists */}
@@ -433,15 +510,45 @@ export default function NewRoadmapPage() {
                 <div className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Judul Roadmap</div>
                 <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100">{roadmapTitle || topic}</h2>
               </div>
-              <div className="flex-shrink-0">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowTextView((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded-full bg-blue-600 text-white px-4 py-2 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  aria-pressed={showTextView}
-                  title={showTextView ? 'Tampilkan versi grafis' : 'Tampilkan versi teks'}
+                  onClick={handleCancel}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  title="Batalkan"
                 >
-                  <span className="font-semibold text-sm">{showTextView ? 'Versi Grafis' : 'Versi Teks'}</span>
+                  Batal
+                </button>
+                {/* View toggle (match old roadmap UI) */}
+                <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-[#2a2a2a] bg-white dark:bg-[#0f0f0f] overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowTextView(false)}
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm ${!showTextView ? 'bg-slate-100 dark:bg-[#1a1a1a] text-slate-900 dark:text-white' : 'text-slate-600 dark:text-neutral-300'}`}
+                    title="Lihat Grafik"
+                    aria-pressed={!showTextView}
+                  >
+                    <GitBranch className="h-4 w-4" />
+                    <span className="hidden sm:inline">Graph</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowTextView(true)}
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm ${showTextView ? 'bg-slate-100 dark:bg-[#1a1a1a] text-slate-900 dark:text-white' : 'text-slate-600 dark:text-neutral-300'}`}
+                    title="Lihat Teks"
+                    aria-pressed={showTextView}
+                  >
+                    <LayoutList className="h-4 w-4" />
+                    <span className="hidden sm:inline">Checklist</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveRoadmap}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  title="Simpan Roadmap"
+                >
+                  Simpan
                 </button>
               </div>
             </div>
@@ -449,8 +556,7 @@ export default function NewRoadmapPage() {
         )}
 
         <div className={cn(
-          "relative flex-1 overflow-hidden",
-          roadmapData && chatOpen ? 'lg:pr-[360px]' : ''
+          "relative flex-1 overflow-hidden"
         )}>
           {/* Konten utama: Graph atau Teks */}
           {roadmapData ? (
@@ -462,112 +568,9 @@ export default function NewRoadmapPage() {
           ) : (
             <RoadmapPlaceholder isLoading={isLoading} />
           )}
-
-          {/* Desktop chat panel with smooth slide-in from right */}
-          {roadmapData && (
-            <div
-              className={cn(
-                'hidden lg:block absolute top-4 right-4 bottom-4 w-[340px] transition-transform duration-300 will-change-transform',
-                chatOpen ? 'translate-x-0' : 'translate-x-[calc(100%+1rem)]'
-              )}
-            >
-              <aside className="flex h-full flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">Edit dengan AI</div>
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                      <input type="checkbox" className="rounded" checked={useAdvancedContext} onChange={(e)=>setUseAdvancedContext(e.target.checked)} />
-                      Advanced
-                    </label>
-                    <button onClick={()=>setChatOpen(false)} className="text-xs text-slate-500 hover:text-slate-300 dark:hover:text-white">Tutup</button>
-                  </div>
-                </div>
-                <div key={listKey} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-                  {chatMessages.length === 0 ? (
-                    <div className="text-xs text-slate-500 dark:text-slate-400">Ketik instruksi, misal: &quot;Tambahkan milestone untuk interview&quot; atau &quot;Selesaikan dalam 6 minggu&quot;.</div>
-                  ) : (
-                    chatMessages.map((m, i) => (
-                      <ChatBubble key={i} role={m.role} content={m.content} />
-                    ))
-                  )}
-                  {chatLoading && <TypingBubble />}
-                </div>
-                <form onSubmit={handleChatSubmit} className="border-t border-slate-200 p-3 flex items-center gap-2">
-                  <input
-                    value={chatInput}
-                    onChange={(e)=>setChatInput(e.target.value)}
-                    placeholder="Tulis instruksi edit…"
-                    className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button disabled={chatLoading || !chatInput.trim()} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium disabled:bg-slate-400">
-                    Kirim
-                  </button>
-                </form>
-              </aside>
-            </div>
-          )}
         </div>
       </div>
-      {/* Floating toggle button (desktop & mobile) */}
-      {roadmapData && (
-        <button
-          type="button"
-          onClick={() => setChatOpen((v)=>!v)}
-          aria-label="Toggle Edit AI"
-          className={cn(
-            'fixed bottom-5 right-5 z-30 rounded-full bg-white border border-slate-200 shadow-lg p-2 hover:shadow-xl transition-all',
-            chatOpen ? 'ring-2 ring-blue-400' : 'ring-0'
-          )}
-        >
-          <span className="sr-only">Edit dengan AI</span>
-          {/* Using next/image for better LCP */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/assets/placeholder_edit.png"
-            alt="Maskot Edit AI"
-            className="h-14 w-14 object-contain animate-mascot"
-            draggable={false}
-          />
-        </button>
-      )}
-      {/* Mobile chat overlay */}
-      {roadmapData && chatOpen && (
-        <div className="lg:hidden fixed inset-0 z-20 bg-black/50 backdrop-blur-sm">
-          <div className="absolute inset-x-3 bottom-3 top-16 rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-              <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">Edit dengan AI</div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                  <input type="checkbox" className="rounded" checked={useAdvancedContext} onChange={(e)=>setUseAdvancedContext(e.target.checked)} />
-                  Advanced
-                </label>
-                <button onClick={()=>setChatOpen(false)} className="text-slate-500 hover:text-slate-300 dark:hover:text-white text-sm">Tutup</button>
-              </div>
-            </div>
-            <div key={`m-${listKey}`} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-              {chatMessages.length === 0 ? (
-                <div className="text-xs text-slate-500 dark:text-slate-400">Ketik instruksi, misal: &quot;Perjelas sub-tugas minggu 1&quot;.</div>
-              ) : (
-                chatMessages.map((m, i) => (
-                  <ChatBubble key={i} role={m.role} content={m.content} />
-                ))
-              )}
-              {chatLoading && <TypingBubble />}
-            </div>
-            <form onSubmit={handleChatSubmit} className="border-t border-slate-200 p-3 flex items-center gap-2">
-              <input
-                value={chatInput}
-                onChange={(e)=>setChatInput(e.target.value)}
-                placeholder="Tulis instruksi edit…"
-                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button disabled={chatLoading || !chatInput.trim()} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-medium disabled:bg-slate-400">
-                Kirim
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      
       {selectedMilestone && ( <MindmapModal isLoading={isModalLoading} mindmapData={mindmapData} explanation={explanation} onClose={() => setSelectedMilestone(null)} topic={selectedMilestone.topic} /> )}
     </div>
     )

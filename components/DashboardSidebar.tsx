@@ -115,7 +115,7 @@ export default function DashboardSidebar() {
         )}
         <SidebarLink expanded={expanded} href="/dashboard/settings" icon={SettingsIcon} label="Settings" />
         <div className={`${expanded ? 'flex justify-between items-center px-1' : ''}`}>
-          <ThemeToggle className={expanded ? '' : ''} />
+          <ThemeToggle className={expanded ? '' : ''} expanded={expanded} />
         </div>
       </nav>
 
