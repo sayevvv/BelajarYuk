@@ -1,12 +1,13 @@
+"use client";
 // app/login/page.tsx
 import LoginCard from "@/components/LoginCard";
 import LoginRightPanel from "@/components/LoginRightPanel";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/auth.config";
-import { redirect } from "next/navigation";
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Space_Mono } from 'next/font/google';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 // Accent monospace font to match landing page Swiss design
 const spaceMono = Space_Mono({
@@ -15,13 +16,16 @@ const spaceMono = Space_Mono({
   variable: '--font-space-mono',
 });
 
-export default async function LoginPage() {
-  const session = await getServerSession(authOptions);
+export default function LoginPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-  // Jika pengguna sudah login, arahkan ke dashboard
-  if (session) {
-    redirect("/dashboard");
-  }
+  // If already authenticated, redirect on client to avoid SSR crashes when auth is misconfigured in prod.
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [status, router]);
 
   return (
     <div className={`h-screen w-full overflow-hidden bg-white ${spaceMono.variable}`}>
@@ -50,8 +54,9 @@ export default async function LoginPage() {
 
             {/* Login Form */}
             <div className="mt-4">
-               <LoginCard />
-             </div>
+              {/* Render form normally; session hook will redirect if already logged in */}
+              <LoginCard />
+            </div>
            </div>
          </div>
 
