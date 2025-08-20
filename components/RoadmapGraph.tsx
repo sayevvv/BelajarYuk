@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import ReactFlow, { 
   Background, 
   Controls, 
@@ -41,7 +41,7 @@ const MilestoneNode = memo(({ data, selected }: NodeProps<MilestoneNodeData>) =>
   const { milestone, onNodeClick, promptMode } = data;
 
   return (
-    <div className="flex flex-col w-full p-4 text-left transition-colors bg-white border shadow-md rounded-xl border-slate-200 hover:border-blue-500" style={{ minHeight: 180 }}>
+    <div className="flex flex-col w-full p-4 text-left transition-colors bg-white dark:bg-[#0a0a0a] border shadow-md rounded-lg border-slate-200 dark:border-[#1f1f1f] hover:border-blue-500" style={{ minHeight: 180 }}>
       <NodeResizer color="#2563eb" handleStyle={{ width: 6, height: 6 }} lineStyle={{ borderWidth: 1.5 }} isVisible={selected} minWidth={320} minHeight={180} />
       
       {/* Handles untuk semua kemungkinan koneksi */}
@@ -54,11 +54,11 @@ const MilestoneNode = memo(({ data, selected }: NodeProps<MilestoneNodeData>) =>
       <Handle type="target" id="right-target" position={Position.Right} isConnectable={true} style={{ opacity: 0 }} />
       
       <div className="flex-grow">
-        <div className="text-xs font-bold tracking-wider text-blue-600">{milestone.timeframe.toUpperCase()}</div>
-        <div className="mt-1 text-base font-semibold text-slate-800">{milestone.topic}</div>
+  <div className="text-xs font-bold tracking-wider text-blue-600">{milestone.timeframe.toUpperCase()}</div>
+  <div className="mt-1 text-base font-semibold text-slate-800 dark:text-neutral-100">{milestone.topic}</div>
         
         {promptMode === 'advanced' && (milestone.estimated_dates || milestone.daily_duration) && (
-            <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+            <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-neutral-400">
                 {milestone.estimated_dates && (
                     <div className="flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5" />
@@ -74,7 +74,7 @@ const MilestoneNode = memo(({ data, selected }: NodeProps<MilestoneNodeData>) =>
             </div>
         )}
         
-        <ul className="mt-3 space-y-1.5 text-xs text-slate-600">
+  <ul className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-neutral-300">
             {milestone.sub_tasks.map((task, index) => (
                 <li key={index} className="flex items-start gap-2">
                     <CheckCircle className="h-3.5 w-3.5 mt-0.5 text-green-500 flex-shrink-0" />
@@ -83,7 +83,7 @@ const MilestoneNode = memo(({ data, selected }: NodeProps<MilestoneNodeData>) =>
             ))}
         </ul>
       </div>
-      <button onClick={() => onNodeClick(milestone)} className="mt-4 w-full px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0">
+  <button onClick={() => onNodeClick(milestone)} className="mt-4 w-full px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0">
         Jabarkan Materi
       </button>
     </div>
@@ -95,40 +95,45 @@ const nodeTypes = {
   milestone: MilestoneNode,
 };
 
-const generateFlowElements = (milestones: Milestone[], onNodeClick: (node: Milestone) => void, promptMode: 'simple' | 'advanced'): { initialNodes: Node[], initialEdges: Edge[] } => {
+const NODE_WIDTH = 320;
+const DEFAULT_NODE_HEIGHT = 240; // fallback height before measurement
+const H_SPACING = 60;
+const V_SPACING = 60;
+const NODES_PER_ROW = 3;
+
+const generateFlowElements = (
+  milestones: Milestone[],
+  onNodeClick: (node: Milestone) => void,
+  promptMode: 'simple' | 'advanced'
+): { initialNodes: Node[], initialEdges: Edge[] } => {
   const initialNodes: Node[] = [];
   const initialEdges: Edge[] = [];
-  const nodeWidth = 320;
-  const nodeHeightForLayout = 240;
-  const horizontalSpacing = 60;
-  const verticalSpacing = 60;
-  const nodesPerRow = 3;
 
   milestones.forEach((milestone, index) => {
     const nodeId = `milestone-${index}`;
-    const row = Math.floor(index / nodesPerRow);
-    const col = index % nodesPerRow;
+    const row = Math.floor(index / NODES_PER_ROW);
+    const col = index % NODES_PER_ROW;
 
-  const y = row * (nodeHeightForLayout + verticalSpacing);
+    const y = row * (DEFAULT_NODE_HEIGHT + V_SPACING);
     const x = row % 2 === 0
-      ? col * (nodeWidth + horizontalSpacing)
-      : (nodesPerRow - 1 - col) * (nodeWidth + horizontalSpacing);
+      ? col * (NODE_WIDTH + H_SPACING)
+      : (NODES_PER_ROW - 1 - col) * (NODE_WIDTH + H_SPACING);
 
     initialNodes.push({
       id: nodeId,
       type: 'milestone',
       position: { x, y },
-      data: { milestone, onNodeClick, promptMode },
-      style: { width: nodeWidth, padding: 0, border: 'none', borderRadius: '12px', backgroundColor: 'transparent' },
+  data: { milestone, onNodeClick, promptMode },
+  style: { width: NODE_WIDTH, padding: 0, border: 'none', borderRadius: '12px', backgroundColor: 'transparent' },
     });
 
     if (index > 0) {
       const prevNodeId = `milestone-${index - 1}`;
-      const prevRow = Math.floor((index - 1) / nodesPerRow);
+  const prevRow = Math.floor((index - 1) / NODES_PER_ROW);
       
       let sourceHandle, targetHandle;
 
-      if (row === prevRow) {
+  if (row === prevRow) {
         if (row % 2 === 0) {
           sourceHandle = 'right';
           targetHandle = 'left';
@@ -160,14 +165,72 @@ const generateFlowElements = (milestones: Milestone[], onNodeClick: (node: Miles
 export default function RoadmapGraph({ data, onNodeClick, promptMode, showMiniMap = false }: { data: { milestones: Milestone[] }, onNodeClick: (milestone: Milestone) => void, promptMode: 'simple' | 'advanced', showMiniMap?: boolean }) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const zoomRef = useRef(1);
+  const lastAppliedPositionsRef = useRef<number[]>([]);
+  const needsLayoutRef = useRef(false);
+  const sourceKeyRef = useRef<string>("");
 
   // Menggunakan useEffect untuk menginisialisasi atau memperbarui state
   // saat data roadmap baru diterima dari prop.
   useEffect(() => {
+    // Only (re)generate graph when data content or mode changes
+    const key = `${promptMode}::${JSON.stringify(data.milestones)}`;
+    if (sourceKeyRef.current === key) return;
+    sourceKeyRef.current = key;
     const { initialNodes, initialEdges } = generateFlowElements(data.milestones, onNodeClick, promptMode);
     setNodes(initialNodes);
     setEdges(initialEdges);
-  }, [data, onNodeClick, promptMode]);
+    needsLayoutRef.current = true;
+  }, [data.milestones, promptMode, onNodeClick]);
+
+  // Keep onNodeClick fresh without rebuilding positions
+  useEffect(() => {
+    setNodes((prev) => prev.map((n) => ({
+      ...n,
+      data: { ...(n.data as any), onNodeClick },
+    })));
+  }, [onNodeClick]);
+
+  // After nodes render, measure actual node heights per row and adjust Y offsets to max height per row
+  useEffect(() => {
+    if (!containerRef.current || nodes.length === 0 || !needsLayoutRef.current) return;
+    // wait a frame for React Flow to paint nodes at current zoom
+    const raf = requestAnimationFrame(() => {
+      const zoom = zoomRef.current || 1;
+      const rows: Record<number, { maxH: number }> = {};
+      const totalRows = Math.ceil(nodes.length / NODES_PER_ROW);
+
+      nodes.forEach((n, idx) => {
+        const row = Math.floor(idx / NODES_PER_ROW);
+        const sel = `.react-flow__node[data-id="${n.id}"], .react-flow__node-milestone[data-id="${n.id}"]`;
+        const el = containerRef.current!.querySelector(sel) as HTMLElement | null;
+        let h = el ? el.getBoundingClientRect().height : DEFAULT_NODE_HEIGHT;
+        if (zoom && zoom !== 1) h = h / zoom; // normalize logical height
+        rows[row] = { maxH: Math.max(rows[row]?.maxH || 0, h) };
+      });
+
+      // Build cumulative Y offsets per row
+      const rowOffsets: number[] = [];
+      let acc = 0;
+      for (let r = 0; r < totalRows; r++) {
+        const maxH = rows[r]?.maxH || DEFAULT_NODE_HEIGHT;
+        rowOffsets[r] = acc;
+        acc += maxH + V_SPACING;
+      }
+
+      // Check if positions would actually change
+      const newYs = nodes.map((_, idx) => rowOffsets[Math.floor(idx / NODES_PER_ROW)]);
+      const prevYs = lastAppliedPositionsRef.current;
+      const changed = newYs.length !== prevYs.length || newYs.some((y, i) => Math.abs(y - (prevYs[i] ?? -9999)) > 0.5);
+      if (!changed) return;
+      lastAppliedPositionsRef.current = newYs;
+
+    setNodes((prev) => prev.map((n, idx) => ({ ...n, position: { x: n.position.x, y: newYs[idx] } })));
+    needsLayoutRef.current = false;
+    });
+  return () => cancelAnimationFrame(raf);
+  }, [nodes]);
 
   // Callback untuk menangani perubahan node (termasuk drag)
   const onNodesChange: OnNodesChange = useCallback(
@@ -182,7 +245,7 @@ export default function RoadmapGraph({ data, onNodeClick, promptMode, showMiniMa
   );
 
   return (
-    <div style={{ height: '100%' }}>
+  <div style={{ height: '100%' }} ref={containerRef}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -195,6 +258,7 @@ export default function RoadmapGraph({ data, onNodeClick, promptMode, showMiniMa
         nodesDraggable={true} 
         nodesConnectable={false}
         elementsSelectable={true}
+  onMove={(_, viewport) => { zoomRef.current = viewport.zoom; }}
       >
         <Background color="#e2e8f0" gap={24} />
         <Controls showInteractive={false} className="fill-slate-600 stroke-slate-600 text-slate-600" />
