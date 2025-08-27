@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth.config';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
+import RoadmapGridClient from '@/components/RoadmapGridClient';
 
 export default async function RoadmapIndexPage() {
   const session = (await getServerSession(authOptions as any)) as any;
@@ -23,7 +24,7 @@ export default async function RoadmapIndexPage() {
       <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Roadmap Saya</h1>
       </header>
-      <div className="p-8">
+  <div className="p-8">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed border-slate-200 rounded-xl dark:border-slate-800">
             <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-200">Belum Ada Roadmap</h2>
@@ -31,14 +32,7 @@ export default async function RoadmapIndexPage() {
             <Link href="/dashboard/new" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200">Buat Rencana Baru</Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {items.map((r) => (
-              <Link key={r.id} href={`/dashboard/roadmaps/${r.id}`} className="block bg-slate-50 p-6 rounded-xl border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all dark:bg-slate-900 dark:border-slate-800 dark:hover:border-slate-700">
-                <h3 className="font-bold text-slate-800 text-lg truncate dark:text-slate-100">{r.title}</h3>
-                <div className="text-sm text-slate-500 mt-2 dark:text-slate-400">Diperbarui {new Date(r.updatedAt).toLocaleString('id-ID')}</div>
-              </Link>
-            ))}
-          </div>
+          <RoadmapGridClient items={items as any} />
         )}
       </div>
     </div>

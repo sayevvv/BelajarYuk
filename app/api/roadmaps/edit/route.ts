@@ -15,7 +15,9 @@ const roadmapSchema = z.object({
     z.object({
       timeframe: z.string(),
       topic: z.string(),
-      sub_tasks: z.array(z.string()),
+      // Accept new 'subbab' and keep backward compat with legacy 'sub_tasks'
+      subbab: z.array(z.string()).optional(),
+      sub_tasks: z.array(z.string()).optional(),
       estimated_dates: z.string().optional(),
       daily_duration: z.string().optional(),
     })
@@ -66,7 +68,7 @@ Instruksi untuk Anda:
 1. Terapkan perubahan yang diminta dengan aman dan konsisten.
 2. Hormati batasan jadwal pada mode advanced (hari tersedia, tanggal, durasi harian). Jika tidak relevan, biarkan seperti adanya.
 3. Jaga agar jumlah milestone tetap wajar; boleh tambah/kurangi bila diperlukan.
-4. Pastikan setiap milestone memiliki timeframe realistis dan sub_tasks yang actionable.
+4. Pastikan setiap milestone memiliki timeframe realistis dan daftar subbab (materi) yang jelas; JANGAN memasukkan ujian/latihan/projek pada subbab.
 5. Kembalikan hanya JSON sesuai format di bawah ini. Jangan menyertakan komentar atau teks lain.
 
 {format_instructions}

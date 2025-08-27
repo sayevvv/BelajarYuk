@@ -7,14 +7,14 @@ import { StructuredOutputParser } from "langchain/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 
-// Skema Zod diperbarui untuk meminta data advanced
+// Skema Zod: gunakan "subbab" sebagai daftar materi yang harus dipelajari (tanpa ujian/latihan)
 const roadmapSchema = z.object({
   duration: z.string().describe("Estimasi durasi total pembelajaran, contoh: '3 Bulan', '6 Minggu'."),
   milestones: z.array(
     z.object({
       timeframe: z.string().describe("Jangka waktu yang spesifik dan realistis untuk milestone ini, contoh: 'Minggu 1', 'Minggu 2-3', '2 Akhir Pekan'."),
       topic: z.string().describe("Topik utama yang akan dipelajari pada jangka waktu tersebut."),
-      sub_tasks: z.array(z.string()).describe("Daftar 3-5 tugas atau poin pembelajaran yang spesifik dan actionable untuk milestone ini."),
+      subbab: z.array(z.string()).min(3).max(6).describe("Daftar subbab (sub-chapter) materi yang harus dipelajari di milestone ini. Fokus pada konsep/materi; JANGAN masukkan ujian/quiz/latihan/projek di sini."),
       estimated_dates: z.string().describe("Estimasi rentang tanggal untuk milestone ini, contoh: '12 Agu - 18 Agu 2025'. Kosongkan jika tidak ada informasi tanggal dari pengguna."),
       daily_duration: z.string().describe("Estimasi durasi belajar harian untuk milestone ini, contoh: '2 jam/hari'. Kosongkan jika tidak ada informasi dari pengguna."),
     })
@@ -24,7 +24,7 @@ const roadmapSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
   const body = await req.json();
-  const { topic, details } = body;
+  const { topic, details, level, goal } = body;
 
     if (!topic) {
       return NextResponse.json({ error: "Topic is required" }, { status: 400 });
@@ -32,34 +32,41 @@ export async function POST(req: NextRequest) {
 
     const parser = StructuredOutputParser.fromZodSchema(roadmapSchema);
 
-    // Prompt yang diperbarui untuk menghasilkan output advanced
+  // Prompt diperbarui: gunakan "subbab" (materi belajar), hindari ujian/latihan/projek di bawah node
     const promptTemplate = new PromptTemplate({
-        template: `Anda adalah seorang ahli perancang kurikulum. Tugas Anda adalah membuat roadmap pembelajaran yang sangat detail dan realistis berdasarkan permintaan dan batasan pengguna.
+      template: `Anda adalah seorang ahli perancang kurikulum. Buat roadmap pembelajaran yang dipersonalisasi, detail, dan realistis.
 
-        Analisis permintaan pengguna berikut:
-        - Topik Utama: {topic}
-        - Detail dan Batasan: {details}
+Analisis permintaan pengguna berikut:
+- Topik Utama: {topic}
+- Level Pengguna Saat Ini: {level}
+- Tujuan Akhir Spesifik: {goal}
+- Detail dan Batasan Lainnya: {details}
 
-        Lakukan proses reasoning berikut:
-        1.  Pahami topik utama dan tujuan akhir pengguna dari detail yang diberikan.
-        2.  Perhatikan batasan waktu yang diberikan: periode belajar, hari yang tersedia, dan durasi belajar maksimal per hari.
-        3.  Pecah topik menjadi beberapa "milestone" yang logis.
-        4.  Untuk setiap milestone:
-            a. Alokasikan **timeframe** yang realistis (misal: "Minggu 1").
-            b. Buat daftar **sub_tasks** yang spesifik dan bisa dikerjakan (3-5 poin).
-            c. Jika pengguna memberikan informasi di mode advanced, hitung dan sertakan **estimated_dates** (rentang tanggal) dan **daily_duration** (durasi harian) untuk milestone ini. Jika tidak ada informasi, biarkan kosong.
-        
-        Hasil akhir HARUS memperhitungkan semua batasan yang diberikan pengguna untuk membuat jadwal yang bisa mereka ikuti.
-        
-        Hasilkan output HANYA dalam format JSON yang valid.
-        
-        {format_instructions}
-        
-        Permintaan Pengguna:
-        Topic: {topic}
-        Details: {details}`,
-        inputVariables: ["topic", "details"],
-        partialVariables: { format_instructions: parser.getFormatInstructions() },
+Lakukan proses reasoning berikut:
+1. Sesuaikan titik awal roadmap berdasarkan level pengguna. Jika bukan pemula, hindari materi yang terlalu dasar.
+2. Prioritaskan topik yang relevan untuk mencapai tujuan akhir spesifik pengguna.
+3. Perhatikan batasan waktu: periode belajar, hari yang tersedia, dan durasi belajar harian.
+4. Pecah topik menjadi beberapa milestone yang logis dan progresif.
+5. Untuk setiap milestone:
+  a. Alokasikan timeframe yang realistis (misal: "Minggu 1").
+  b. Buat 3-5 subbab (sub-chapter) berupa judul materi apa yang HARUS dipelajari. Gunakan bahasa ringkas, jelas, dan best-practice.
+    - Larangan: Jangan masukkan tugas, latihan, quiz, ujian, atau projek pada daftar subbab. Simpan itu sebagai fitur terpisah di masa depan.
+    - Format subbab: array of string.
+  c. Jika data ada, sertakan estimated_dates (rentang tanggal) dan daily_duration (durasi harian). Jika tidak, biarkan kosong.
+
+Hasil akhir HARUS memperhitungkan semua batasan dan membantu pengguna mencapai tujuan akhir.
+
+Hasilkan output HANYA dalam format JSON yang valid sesuai skema.
+
+{format_instructions}
+
+Permintaan Pengguna:
+Topic: {topic}
+Level: {level}
+Goal: {goal}
+Details: {details}`,
+      inputVariables: ["topic", "level", "goal", "details"],
+      partialVariables: { format_instructions: parser.getFormatInstructions() },
     });
     
     const model = new ChatGoogleGenerativeAI({
@@ -76,9 +83,14 @@ export async function POST(req: NextRequest) {
     
     const chain = promptTemplate.pipe(model).pipe(parser);
 
+    const levelText = (typeof level === 'string' && level.trim()) ? level.trim() : 'Tidak disebutkan (asumsikan pemula jika tidak jelas)';
+    const goalText = (typeof goal === 'string' && goal.trim()) ? goal.trim() : 'Tidak disebutkan secara spesifik';
+
     const result = await chain.invoke({
       topic: topic,
-      details: details || "Tidak ada detail tambahan, buatkan untuk pemula.",
+      level: levelText,
+      goal: goalText,
+      details: details || 'Tidak ada detail tambahan.',
     });
 
     return NextResponse.json(result, { status: 200 });

@@ -1,15 +1,16 @@
 // app/dashboard/layout.tsx
-import DashboardSidebar from '@/components/DashboardSidebar';
+"use client";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+import DashboardSidebar from '@/components/DashboardSidebar';
+import { usePathname } from 'next/navigation';
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isFullScreen = /^\/dashboard\/roadmaps\/[^/]+\/(read|quiz)$/.test(pathname || '');
+
   return (
-    // Layout utama untuk dashboard dengan sidebar
     <div className="flex h-screen bg-slate-50 dark:bg-black">
-      <DashboardSidebar />
+  {!isFullScreen && <DashboardSidebar />}
       <main className="flex-1 overflow-hidden bg-white dark:bg-black">
         {children}
       </main>

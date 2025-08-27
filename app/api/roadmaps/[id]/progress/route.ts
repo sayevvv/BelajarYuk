@@ -10,7 +10,7 @@ function calcPercent(content: any, completedMap: Record<string, boolean>) {
     const milestones = content?.milestones || [];
     let total = 0; let done = 0;
     milestones.forEach((m: any, mi: number) => {
-      const tasks = m?.sub_tasks || [];
+      const tasks = (Array.isArray(m?.subbab) ? m.subbab : (m?.sub_tasks || []));
       tasks.forEach((_t: any, ti: number) => {
         total += 1;
         const key = `m-${mi}-t-${ti}`;
@@ -25,22 +25,22 @@ function calcPercent(content: any, completedMap: Record<string, boolean>) {
 }
 
 export async function GET(_req: NextRequest, ctx: any) {
-  const { params } = (ctx || {}) as { params: { id: string } };
+  const { id } = await (ctx as any).params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const roadmap = await (prisma as any).roadmap.findFirst({ where: { id: params.id, userId: session.user.id }, include: { progress: true } });
+  const roadmap = await (prisma as any).roadmap.findFirst({ where: { id, userId: session.user.id }, include: { progress: true } });
   if (!roadmap) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(roadmap.progress);
 }
 
 export async function POST(req: NextRequest, ctx: any) {
-  const { params } = (ctx || {}) as { params: { id: string } };
+  const { id } = await (ctx as any).params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const { milestoneIndex, taskIndex, done } = body as { milestoneIndex: number; taskIndex: number; done: boolean };
 
-  const roadmap = await prisma.roadmap.findFirst({ where: { id: params.id, userId: session.user.id } });
+  const roadmap = await prisma.roadmap.findFirst({ where: { id, userId: session.user.id } });
   if (!roadmap) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const key = `m-${milestoneIndex}-t-${taskIndex}`;

@@ -6,12 +6,12 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export async function GET(_req: NextRequest, ctx: any) {
-  const { params } = (ctx || {}) as { params: { id: string } };
+  const { id } = await (ctx as any).params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const roadmap = await (prisma as any).roadmap.findFirst({
-    where: { id: params.id, userId: session.user.id },
+    where: { id, userId: session.user.id },
     include: { progress: true, user: { select: { name: true, image: true } } },
   });
   if (!roadmap) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -19,13 +19,13 @@ export async function GET(_req: NextRequest, ctx: any) {
 }
 
 export async function DELETE(_req: NextRequest, ctx: any) {
-  const { params } = (ctx || {}) as { params: { id: string } };
+  const { id } = await (ctx as any).params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const existing = await (prisma as any).roadmap.findFirst({ where: { id: params.id, userId: session.user.id } });
+  const existing = await (prisma as any).roadmap.findFirst({ where: { id, userId: session.user.id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await (prisma as any).roadmap.delete({ where: { id: params.id } });
+  await (prisma as any).roadmap.delete({ where: { id } });
   return NextResponse.json({ ok: true }, { status: 200 });
 }

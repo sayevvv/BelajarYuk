@@ -20,13 +20,20 @@ import ReactFlow, {
   OnEdgesChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { CheckCircle, Calendar, Clock } from 'lucide-react';
+import { CheckCircle, Calendar, Clock, BookOpen, Hammer, Dumbbell } from 'lucide-react';
 
 // Interface diperbarui untuk data advanced
+interface SubTask {
+  task: string;
+  type: 'teori' | 'projek' | 'latihan';
+}
+
 interface Milestone {
   timeframe: string;
   topic: string;
-  sub_tasks: string[];
+  // Prefer new 'subbab' (string[]) but keep legacy 'sub_tasks' for saved data
+  subbab?: string[];
+  sub_tasks?: Array<SubTask | string>;
   estimated_dates?: string;
   daily_duration?: string;
 }
@@ -35,10 +42,12 @@ interface MilestoneNodeData {
   milestone: Milestone;
   onNodeClick: (node: Milestone) => void;
   promptMode: 'simple' | 'advanced';
+  durationDays?: number;
+  computedDates?: string; // computed from startDate and cumulative offsets
 }
 
 const MilestoneNode = memo(({ data, selected }: NodeProps<MilestoneNodeData>) => {
-  const { milestone, onNodeClick, promptMode } = data;
+  const { milestone, onNodeClick, promptMode, durationDays, computedDates } = data;
 
   return (
     <div className="flex flex-col w-full p-4 text-left transition-colors bg-white dark:bg-[#0a0a0a] border shadow-md rounded-lg border-slate-200 dark:border-[#1f1f1f] hover:border-blue-500" style={{ minHeight: 180 }}>
@@ -56,30 +65,35 @@ const MilestoneNode = memo(({ data, selected }: NodeProps<MilestoneNodeData>) =>
       <div className="flex-grow">
   <div className="text-xs font-bold tracking-wider text-blue-600">{milestone.timeframe.toUpperCase()}</div>
   <div className="mt-1 text-base font-semibold text-slate-800 dark:text-neutral-100">{milestone.topic}</div>
-        
-        {promptMode === 'advanced' && (milestone.estimated_dates || milestone.daily_duration) && (
-            <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-neutral-400">
-                {milestone.estimated_dates && (
-                    <div className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>{milestone.estimated_dates}</span>
-                    </div>
-                )}
-                {milestone.daily_duration && (
-                     <div className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>{milestone.daily_duration}</span>
-                    </div>
-                )}
+        {/* Duration badge and date details */}
+        {(durationDays || computedDates || (promptMode === 'advanced' && (milestone.estimated_dates || milestone.daily_duration))) && (
+          <div className="mt-2 space-y-1">
+            {typeof durationDays === 'number' && durationDays > 0 ? (
+              <div className="text-[11px] font-medium text-slate-600 dark:text-neutral-400">({durationDays} hari)</div>
+            ) : null}
+            <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-neutral-400">
+              {(computedDates || milestone.estimated_dates) && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>{computedDates || milestone.estimated_dates}</span>
+                </div>
+              )}
+              {promptMode === 'advanced' && milestone.daily_duration && (
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{milestone.daily_duration}</span>
+                </div>
+              )}
             </div>
+          </div>
         )}
         
-  <ul className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-neutral-300">
-            {milestone.sub_tasks.map((task, index) => (
-                <li key={index} className="flex items-start gap-2">
-                    <CheckCircle className="h-3.5 w-3.5 mt-0.5 text-green-500 flex-shrink-0" />
-                    <span>{task}</span>
-                </li>
+        <ul className="mt-3 space-y-1.5 text-xs text-slate-600 dark:text-neutral-300">
+          {(milestone.subbab && milestone.subbab.length > 0
+            ? milestone.subbab
+            : (milestone.sub_tasks || []).map((stRaw) => (typeof stRaw === 'string' ? stRaw : (stRaw as any).task)))
+            .map((title, index) => (
+              <li key={index} className="list-disc list-inside">{title}</li>
             ))}
         </ul>
       </div>
@@ -101,13 +115,31 @@ const H_SPACING = 60;
 const V_SPACING = 60;
 const NODES_PER_ROW = 3;
 
+function formatDateRange(start: Date, days: number) {
+  const end = new Date(start);
+  end.setDate(end.getDate() + Math.max(0, days - 1));
+  const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' };
+  const s = start.toLocaleDateString('id-ID', opts);
+  const e = end.toLocaleDateString('id-ID', opts);
+  return `${s} - ${e}`;
+}
+
 const generateFlowElements = (
   milestones: Milestone[],
   onNodeClick: (node: Milestone) => void,
-  promptMode: 'simple' | 'advanced'
+  promptMode: 'simple' | 'advanced',
+  startDate?: string
 ): { initialNodes: Node[], initialEdges: Edge[] } => {
   const initialNodes: Node[] = [];
   const initialEdges: Edge[] = [];
+
+  // Precompute duration days per milestone and cumulative offsets
+  const durations = milestones.map((m) => {
+    const count = (m.subbab?.length ?? (m.sub_tasks?.length ?? 0));
+    return Math.max(1, count);
+  });
+  const cumulativeOffsets = durations.map((_, i) => durations.slice(0, i).reduce((a, b) => a + b, 0));
+  const baseDate = startDate ? new Date(startDate) : null;
 
   milestones.forEach((milestone, index) => {
     const nodeId = `milestone-${index}`;
@@ -119,11 +151,14 @@ const generateFlowElements = (
       ? col * (NODE_WIDTH + H_SPACING)
       : (NODES_PER_ROW - 1 - col) * (NODE_WIDTH + H_SPACING);
 
+    const durationDays = durations[index];
+    const computedDates = baseDate ? formatDateRange(new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + cumulativeOffsets[index]), durationDays) : undefined;
+
     initialNodes.push({
       id: nodeId,
       type: 'milestone',
       position: { x, y },
-  data: { milestone, onNodeClick, promptMode },
+  data: { milestone, onNodeClick, promptMode, durationDays, computedDates },
   style: { width: NODE_WIDTH, padding: 0, border: 'none', borderRadius: '12px', backgroundColor: 'transparent' },
     });
 
@@ -162,7 +197,7 @@ const generateFlowElements = (
   return { initialNodes, initialEdges };
 };
 
-export default function RoadmapGraph({ data, onNodeClick, promptMode, showMiniMap = false }: { data: { milestones: Milestone[] }, onNodeClick: (milestone: Milestone) => void, promptMode: 'simple' | 'advanced', showMiniMap?: boolean }) {
+export default function RoadmapGraph({ data, onNodeClick, promptMode, startDate, showMiniMap = false }: { data: { milestones: any[] }, onNodeClick: (milestone: any) => void, promptMode: 'simple' | 'advanced', startDate?: string, showMiniMap?: boolean }) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -178,11 +213,11 @@ export default function RoadmapGraph({ data, onNodeClick, promptMode, showMiniMa
     const key = `${promptMode}::${JSON.stringify(data.milestones)}`;
     if (sourceKeyRef.current === key) return;
     sourceKeyRef.current = key;
-    const { initialNodes, initialEdges } = generateFlowElements(data.milestones, onNodeClick, promptMode);
+  const { initialNodes, initialEdges } = generateFlowElements(data.milestones, onNodeClick, promptMode, startDate);
     setNodes(initialNodes);
     setEdges(initialEdges);
     needsLayoutRef.current = true;
-  }, [data.milestones, promptMode, onNodeClick]);
+  }, [data.milestones, promptMode, onNodeClick, startDate]);
 
   // Keep onNodeClick fresh without rebuilding positions
   useEffect(() => {

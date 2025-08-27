@@ -70,6 +70,7 @@ model Roadmap {
   
   // Menyimpan seluruh output AI sebagai JSON
   content   Json
+  contentHash String?
 
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -83,6 +84,9 @@ model Roadmap {
 
   // Jika roadmap ini hasil fork dari roadmap lain, simpan id sumbernya
   sourceId   String?
+
+  @@unique([userId, sourceId])
+  @@index([userId, contentHash, title])
 }
 
 model RoadmapProgress {

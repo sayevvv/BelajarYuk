@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/ToastProvider';
 import RoadmapGraph from './RoadmapGraph';
-import { LayoutList, GitBranch } from 'lucide-react';
+import { LayoutList, GitBranch, CheckCircle } from 'lucide-react';
 
 type Roadmap = {
   id: string;
@@ -25,6 +25,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const [progress, setProgress] = useState<{ completedTasks: Record<string, boolean>; percent: number } | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [view, setView] = useState<'graph' | 'checklist'>('graph');
+  // Start-date disabled for saved roadmaps
 
   // Load roadmap + progress
   useEffect(() => {
@@ -72,23 +73,9 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
     } catch {}
   }, [view, roadmapId]);
 
-  const milestones: Array<{ timeframe: string; topic: string; sub_tasks: string[] }>
-    = useMemo(() => roadmap?.content?.milestones || [], [roadmap]);
-
-  const toggleTask = async (mi: number, ti: number, done: boolean) => {
-    try {
-      const res = await fetch(`/api/roadmaps/${roadmapId}/progress`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ milestoneIndex: mi, taskIndex: ti, done }),
-      });
-      if (!res.ok) throw new Error('Gagal menyimpan progress');
-      const pj = await res.json();
-      setProgress(pj);
-    } catch (e: any) {
-      setError(e.message || 'Gagal menyimpan progress');
-    }
-  };
+  // Support both new 'subbab' and legacy 'sub_tasks'
+  const milestones: Array<{ timeframe: string; topic: string; subbab?: string[]; sub_tasks?: Array<string | { task: string; type?: string }> }>
+    = useMemo(() => (roadmap?.content?.milestones || []) as any, [roadmap]);
 
   const handlePublish = async (publish: boolean) => {
     try {
@@ -140,7 +127,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
           <div className="text-[11px] uppercase tracking-wider text-slate-500">Rencana Belajar</div>
           <h1 className="text-2xl font-bold text-slate-900">{roadmap.title}</h1>
         </div>
-        <div className="flex items-center gap-3">
+  <div className="flex items-center gap-3">
           {/* View toggle */}
           <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-[#2a2a2a] bg-white dark:bg-[#0f0f0f] overflow-hidden">
             <button
@@ -165,6 +152,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
           {roadmap.published && roadmap.slug ? (
             <Link href={`/r/${roadmap.slug}`} className="rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-semibold hover:bg-slate-800" target="_blank">Lihat Publik</Link>
           ) : null}
+          <Link href={`/dashboard/roadmaps/${roadmap.id}/read`} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700">Mulai Belajar</Link>
           <button
             type="button"
             disabled={publishing || !!(roadmap as any).sourceId}
@@ -183,7 +171,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
         </div>
       </header>
 
-      {/* Progress bar */}
+  {/* Progress bar */}
       <div className="p-6 border-b border-slate-200 dark:border-[#1f1f1f]">
         <div className="flex items-center justify-between text-sm text-slate-600">
           <span>Progress</span>
@@ -192,6 +180,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
         <div className="mt-2 h-2 w-full rounded-full bg-slate-200 overflow-hidden">
           <div className="h-full bg-blue-600 transition-all" style={{ width: `${progress?.percent ?? 0}%` }} />
         </div>
+  {/* Removed start-date controls */}
       </div>
 
       {/* Main Content */}
@@ -201,7 +190,12 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             <RoadmapGraph
               data={{ milestones: milestones as any }}
               onNodeClick={(m: any) => {
-                show({ type: 'info', title: m.topic, message: m.sub_tasks?.[0] || m.timeframe });
+                const first = Array.isArray((m as any).subbab) && (m as any).subbab.length > 0
+                  ? (m as any).subbab[0]
+                  : (Array.isArray((m as any).sub_tasks) && (m as any).sub_tasks.length > 0
+                    ? (typeof (m as any).sub_tasks[0] === 'string' ? (m as any).sub_tasks[0] : (m as any).sub_tasks[0]?.task)
+                    : undefined);
+                show({ type: 'info', title: m.topic, message: first || m.timeframe });
               }}
               promptMode={'simple'}
               showMiniMap={false}
@@ -218,27 +212,55 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                     <div className="text-xs font-semibold tracking-widest uppercase text-blue-600">{m.timeframe || `Tahap ${mi + 1}`}</div>
                     <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-neutral-100">{m.topic}</h3>
                   </div>
+                  {(() => {
+                    const prevQuizKey = `quiz-m-${mi - 1}`;
+                    const prevPassed = mi === 0 ? true : !!(progress?.completedTasks as any)?.[prevQuizKey]?.passed;
+                    const href = `/dashboard/roadmaps/${(roadmap as any).id}/read?m=${mi}&s=0`;
+                    return prevPassed ? (
+                      <Link href={href} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700">Mulai Belajar</Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-200 text-slate-500 text-xs font-semibold cursor-not-allowed" title="Selesaikan kuis tahap sebelumnya untuk membuka materi ini">Mulai Belajar</span>
+                    );
+                  })()}
                 </div>
-                {m.sub_tasks?.length ? (
+                {(Array.isArray((m as any).subbab) && (m as any).subbab.length) || (Array.isArray((m as any).sub_tasks) && (m as any).sub_tasks.length) ? (
                   <ul className="divide-y divide-slate-200 dark:divide-[#1f1f1f]">
-                    {m.sub_tasks.map((task, ti) => {
+                    {(Array.isArray((m as any).subbab) ? (m as any).subbab : (m as any).sub_tasks).map((task: any, ti: number) => {
                       const key = `m-${mi}-t-${ti}`;
                       const done = !!progress?.completedTasks?.[key];
+                      const label = typeof task === 'string' ? task : task?.task;
                       return (
                         <li key={ti} className="flex items-center gap-3 px-5 py-3">
-                          <input
-                            id={`${key}`}
-                            type="checkbox"
-                            checked={done}
-                            onChange={(e) => toggleTask(mi, ti, e.target.checked)}
-                            className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <label htmlFor={`${key}`} className={`text-slate-800 dark:text-neutral-200 ${done ? 'line-through text-slate-400 dark:text-neutral-500' : ''}`}>{task}</label>
+                          {done ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" aria-label="Selesai" />
+                          ) : (
+                            <span className="h-5 w-5 inline-block rounded-full border border-slate-300" aria-hidden />
+                          )}
+                          <Link href={`/dashboard/roadmaps/${(roadmap as any).id}/read?m=${mi}&s=${ti}`} className="text-slate-800 dark:text-neutral-200 hover:underline">{label}</Link>
                         </li>
                       );
                     })}
                   </ul>
                 ) : null}
+                {/* Quiz row with distinct background */}
+                <div className="px-5 py-3 border-t border-slate-200 dark:border-[#1f1f1f] bg-sky-50 dark:bg-[#0b1a24] rounded-b-xl">
+                  {(() => {
+                    const quizKey = `quiz-m-${mi}`;
+                    const quizEntry: any = (progress?.completedTasks as any)?.[quizKey];
+                    const quizDone = !!quizEntry?.passed;
+                    const quizScore = typeof quizEntry?.score === 'number' ? quizEntry.score : null;
+                    return (
+                      <Link href={`/dashboard/roadmaps/${(roadmap as any).id}/quiz?m=${mi}`} className="flex items-center gap-3 text-sky-900 dark:text-sky-300 hover:underline font-medium">
+                        {quizDone ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" aria-label="Kuis Lulus" />
+                        ) : (
+                          <span className="h-5 w-5 inline-block rounded-full border border-slate-300" aria-hidden />
+                        )}
+                        <span>Kuis {m.topic}{quizScore !== null ? ` — Skor: ${quizScore}%` : ''}</span>
+                      </Link>
+                    );
+                  })()}
+                </div>
               </li>
             ))}
           </ol>

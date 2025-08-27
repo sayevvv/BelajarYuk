@@ -11,7 +11,7 @@ import RoadmapPlaceholder from "@/components/RoadmapPlaceholder"; // Impor kompo
 import { Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
 import { cn } from '@/lib/utils';
-import { GitBranch, LayoutList } from 'lucide-react';
+import { GitBranch, LayoutList, BookOpen, Hammer, Dumbbell, FilePlus2 } from 'lucide-react';
 
 // --- Skema Zod ---
 const roadmapSchema = z.object({
@@ -20,7 +20,7 @@ const roadmapSchema = z.object({
     z.object({
       timeframe: z.string(),
       topic: z.string(),
-      sub_tasks: z.array(z.string()),
+  subbab: z.array(z.string()),
       estimated_dates: z.string().optional(),
       daily_duration: z.string().optional(),
     })
@@ -75,15 +75,17 @@ const TypingBubble = () => (
 );
 
 // --- Komponen Modal ---
-const MindmapModal = ({ mindmapData, explanation, isLoading, onClose, topic }: { 
-    mindmapData: MindmapData | null, 
-    explanation: string | null,
-    isLoading: boolean, 
-    onClose: () => void, 
-    topic: string 
+const MindmapModal = ({ mindmapData, explanation, resources, isLoading, onClose, topic }: { 
+  mindmapData: MindmapData | null, 
+  explanation: string | null,
+  resources: Array<{ title: string; url: string; source: string }> | null,
+  isLoading: boolean, 
+  onClose: () => void, 
+  topic: string 
 }) => (
     <Transition as={Fragment} show={true} appear>
-        <div className="fixed inset-0 z-50 flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true"><Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0"><div className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm" /></Transition.Child><Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95"><div className="relative bg-white rounded-2xl shadow-2xl w-[90vw] h-[90vh] flex flex-col overflow-hidden"><header className="flex items-center justify-between flex-shrink-0 p-4 border-b border-slate-200"><h2 className="text-lg font-semibold text-slate-900" id="modal-title">Jabaran Materi: <span className="font-bold text-blue-600">{topic}</span></h2><button onClick={onClose} className="p-1 transition-colors rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100" aria-label="Close modal"><svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button></header><div className="flex flex-grow overflow-hidden"><aside className="w-1/3 p-6 overflow-y-auto border-r border-slate-200 bg-slate-50/50"><h3 className="font-semibold text-slate-800">Penjelasan Lengkap</h3>{isLoading || !explanation ? (<div className="space-y-4 mt-2"><div className="h-4 bg-slate-200 rounded w-5/6 animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-full animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-4/6 animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-full animate-pulse"></div></div>) : (<p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-slate-600">{explanation}</p>)}</aside><main className="relative flex-grow w-2/3">{isLoading ? (<div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50"><span className="font-medium text-slate-600">Membangun mindmap...</span></div>) : (mindmapData ? <MindmapGraph data={mindmapData} /> : <div className="flex items-center justify-center h-full text-slate-400">Mindmap akan muncul di sini.</div>)}</main></div></div></Transition.Child></div>
+  <div className="fixed inset-0 z-50 flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true"><Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0"><div className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm" /></Transition.Child><Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95"><div className="relative bg-white rounded-2xl shadow-2xl w-[90vw] h-[90vh] flex flex-col overflow-hidden"><header className="flex items-center justify-between flex-shrink-0 p-4 border-b border-slate-200"><h2 className="text-lg font-semibold text-slate-900" id="modal-title">Jabaran Materi: <span className="font-bold text-blue-600">{topic}</span></h2><button onClick={onClose} className="p-1 transition-colors rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100" aria-label="Close modal"><svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button></header><div className="flex flex-grow overflow-hidden"><aside className="w-1/3 p-6 overflow-y-auto border-r border-slate-200 bg-slate-50/50"><h3 className="font-semibold text-slate-800">Penjelasan Lengkap</h3>{isLoading || !explanation ? (<div className="space-y-4 mt-2"><div className="h-4 bg-slate-200 rounded w-5/6 animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-full animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-4/6 animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-full animate-pulse"></div></div>) : (<><p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-slate-600">{explanation}</p>{resources?.length ? (<div className="mt-6"><h4 className="text-sm font-semibold text-slate-700">Sumber Belajar Rekomendasi</h4><ul className="mt-2 space-y-2 text-sm">{resources.map((r, i) => (<li key={i}><a href={r.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{r.title}</a><span className="ml-2 text-xs text-slate-500">({r.source})</span></li>))}</ul></div>) : null}</>)}
+  </aside><main className="relative flex-grow w-2/3">{isLoading ? (<div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50"><span className="font-medium text-slate-600">Membangun mindmap...</span></div>) : (mindmapData ? <MindmapGraph data={mindmapData} /> : <div className="flex items-center justify-center h-full text-slate-400">Mindmap akan muncul di sini.</div>)}</main></div></div></Transition.Child></div>
     </Transition>
 );
 
@@ -96,6 +98,7 @@ export default function NewRoadmapPage() {
   const [error, setError] = useState<string | null>(null);
   const [mindmapData, setMindmapData] = useState<MindmapData | null>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
+  const [resources, setResources] = useState<Array<{ title: string; url: string; source: string }> | null>(null);
   const [isModalLoading, setIsModalLoading] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
   const [promptMode, setPromptMode] = useState<'simple' | 'advanced'>('simple');
@@ -106,15 +109,23 @@ export default function NewRoadmapPage() {
   const [finalGoal, setFinalGoal] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [userLevel, setUserLevel] = useState<'beginner' | 'intermediate' | 'pro'>('beginner');
+  const [enableTimeOptions, setEnableTimeOptions] = useState(false);
   const [showTextView, setShowTextView] = useState(false);
   const [roadmapTitle, setRoadmapTitle] = useState('');
+  // Snapshot of the topic used to generate the currently loaded roadmap (for stable display)
+  const [activeTopic, setActiveTopic] = useState('');
+  // Snapshot of the prompt mode used to generate the current roadmap (stabilize timestamps display)
+  const [activePromptMode, setActivePromptMode] = useState<'simple' | 'advanced'>('simple');
   const [isSaved, setIsSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   // Chat-like AI edit state (now lives in the left panel after roadmap exists)
   const [chatMessages, setChatMessages] = useState<{ role: 'user'|'assistant'; content: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [useAdvancedContext, setUseAdvancedContext] = useState(false);
   const [listKey, setListKey] = useState(0);
+  const [newFormOpen, setNewFormOpen] = useState(false);
 
   const isSessionLoading = status === "loading";
 
@@ -122,21 +133,25 @@ export default function NewRoadmapPage() {
     setSelectedMilestone(milestone);
     setIsModalLoading(true);
     setMindmapData(null);
-    setExplanation(null);
+  setExplanation(null);
+  setResources(null);
     setError(null);
-    const detailsForApi = milestone.sub_tasks.join('\n- ');
+  const detailsForApi = Array.isArray((milestone as any).subbab) ? (milestone as any).subbab.join('\n- ') : '';
     try {
-      const [mindmapResponse, explanationResponse] = await Promise.all([
+      const [mindmapResponse, explanationResponse, resourcesResponse] = await Promise.all([
         fetch('/api/generate-mindmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: milestone.topic, details: detailsForApi }), }),
-        fetch('/api/generate-explanation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: milestone.topic, details: detailsForApi }), })
+        fetch('/api/generate-explanation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: milestone.topic, details: detailsForApi }), }),
+        fetch('/api/get-resources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: milestone.topic }) })
       ]);
-      if (!mindmapResponse.ok || !explanationResponse.ok) throw new Error(`Server error`);
+      if (!mindmapResponse.ok || !explanationResponse.ok || !resourcesResponse.ok) throw new Error(`Server error`);
       const mindmapResult = await mindmapResponse.json();
       const parsedMindmap = mindmapSchema.safeParse(mindmapResult);
       if (parsedMindmap.success) setMindmapData(parsedMindmap.data); else console.error("Zod validation error for mindmap:", parsedMindmap.error);
       const explanationResult = await explanationResponse.json();
       const parsedExplanation = explanationSchema.safeParse(explanationResult);
       if (parsedExplanation.success) setExplanation(parsedExplanation.data.explanation); else console.error("Zod validation error for explanation:", parsedExplanation.error);
+      const resourcesResult = await resourcesResponse.json();
+      if (Array.isArray(resourcesResult?.resources)) setResources(resourcesResult.resources);
     } catch (err: any) {
       setError(err.message || "Gagal mengambil data detail.");
     } finally {
@@ -146,6 +161,21 @@ export default function NewRoadmapPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // If replacing an existing roadmap, run cancel-like reset but without confirmation; show warning toast
+    if (roadmapData) {
+      try { show({ type: 'info', title: 'Mengganti Roadmap', message: 'Roadmap sebelumnya dibuang. Membuat yang baru…' }); } catch {}
+      setChatMessages([]);
+      setChatInput('');
+      setChatLoading(false);
+      setSelectedMilestone(null);
+      setMindmapData(null);
+      setExplanation(null);
+      setResources(null);
+      setIsModalLoading(false);
+      setShowTextView(false);
+      setRoadmapTitle('');
+      setNewFormOpen(false);
+    }
     setIsLoading(true);
     setError(null);
     setRoadmapData(null);
@@ -153,8 +183,21 @@ export default function NewRoadmapPage() {
     const topicToSend = (promptMode === 'simple' ? simpleDetails : topic).trim();
     const details = (promptMode === 'advanced')
       ? (() => {
-          const dayMapping: { [key: string]: string } = { all: 'Setiap Hari (Kerja & Akhir Pekan)', weekdays: 'Hanya Hari Kerja', weekends: 'Hanya Akhir Pekan' };
-          return `Ketersediaan Waktu: ${dayMapping[availableDays]}. Durasi Belajar Maksimal: ${dailyDuration} jam per hari. Periode Belajar: Dari ${startDate || 'sekarang'} sampai ${endDate || 'tidak ditentukan'}. Tujuan Akhir: ${finalGoal || 'Menguasai topik secara fundamental'}.`.trim();
+          const levelLabel = userLevel === 'beginner'
+            ? 'Baru mulai dari nol'
+            : userLevel === 'intermediate'
+              ? `Sudah paham dasar-dasar ${topic || 'topik ini'}`
+              : 'Profesional yang ingin menambah skill';
+          const parts: string[] = [];
+          parts.push(`Level Pengguna: ${levelLabel}.`);
+          parts.push(`Tujuan Akhir: ${finalGoal || 'Menguasai topik secara fundamental'}.`);
+          if (enableTimeOptions) {
+            const dayMapping: { [key: string]: string } = { all: 'Setiap Hari (Kerja & Akhir Pekan)', weekdays: 'Hanya Hari Kerja', weekends: 'Hanya Akhir Pekan' };
+            parts.push(`Ketersediaan Waktu: ${dayMapping[availableDays]}.`);
+            parts.push(`Durasi Belajar Maksimal: ${dailyDuration} jam per hari.`);
+            parts.push(`Periode Belajar: Dari ${startDate || 'sekarang'} sampai ${endDate || 'tidak ditentukan'}.`);
+          }
+          return parts.join(' ').trim();
         })()
       : '';
 
@@ -175,6 +218,10 @@ export default function NewRoadmapPage() {
       if (parsedData.success) {
         setRoadmapData(parsedData.data);
   setIsSaved(false);
+        // Snapshot the topic used for this roadmap to keep header stable while drafting a new one
+        setActiveTopic(topicToSend);
+  // Snapshot the prompt mode used to generate this roadmap so left panel toggles won't affect graph display
+  setActivePromptMode(promptMode);
         // Generate title automatically from topic and details
         try {
           const titleRes = await fetch('/api/generate-title', {
@@ -198,6 +245,7 @@ export default function NewRoadmapPage() {
   };
 
   const handleSaveRoadmap = async () => {
+  if (saving) return;
     if (!session) {
   show({ type: 'info', title: 'Perlu Login', message: 'Silakan login untuk menyimpan roadmap Anda.' });
       window.location.href = '/login?callbackUrl=/dashboard/new';
@@ -208,14 +256,18 @@ export default function NewRoadmapPage() {
       return;
     }
     try {
-  const response = await fetch('/api/roadmaps/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: roadmapTitle || topic, content: roadmapData, }), });
+      setSaving(true);
+  const response = await fetch('/api/roadmaps/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: roadmapTitle || activeTopic, content: roadmapData, }), });
       if (!response.ok) throw new Error("Gagal menyimpan roadmap.");
-  show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan!' });
-  setIsSaved(true);
+      const saved = await response.json();
+      show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan!' });
+      setIsSaved(true);
+  // Redirect ke daftar "Roadmap Saya" dan jalankan persiapan materi di background
+  window.location.href = `/dashboard/roadmaps?created=${saved.id}`;
     } catch (err: any) {
       setError(err.message);
   show({ type: 'error', title: 'Gagal Menyimpan', message: err.message || 'Terjadi kesalahan.' });
-    }
+    } finally { setSaving(false); }
   };
 
   // Batalkan pembuatan/penyuntingan roadmap dan reset seluruh state ke awal
@@ -244,6 +296,8 @@ export default function NewRoadmapPage() {
     // Reset generated & chat state
     setRoadmapData(null);
     setRoadmapTitle('');
+  setActiveTopic('');
+  setActivePromptMode('simple');
     setChatMessages([]);
     setChatInput('');
     setChatLoading(false);
@@ -252,7 +306,8 @@ export default function NewRoadmapPage() {
     setSelectedMilestone(null);
     setMindmapData(null);
     setExplanation(null);
-    setIsModalLoading(false);
+  setIsModalLoading(false);
+  setResources(null);
     // Mark as saved to silence unsaved guard
     setIsSaved(true);
     try { show({ type: 'info', title: 'Dibatalkan', message: 'Pembuatan roadmap dibatalkan.' }); } catch {}
@@ -265,7 +320,7 @@ export default function NewRoadmapPage() {
     setChatMessages((m) => [...m, userMsg]);
     setChatLoading(true);
     try {
-      const constraints = useAdvancedContext ? { availableDays, dailyDuration, startDate, endDate, finalGoal } : undefined;
+  const constraints = useAdvancedContext ? { availableDays, dailyDuration, startDate, endDate, finalGoal, userLevel } : undefined;
       const res = await fetch('/api/roadmaps/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -294,6 +349,8 @@ export default function NewRoadmapPage() {
       setListKey((k) => k + 1);
     }
   };
+
+  // no explicit startNewRoadmap; use icon toggle to open the initial form
 
   // Unsaved changes guard: beforeunload + internal navigation interception
   const hasUnsaved = !isSaved && !!(
@@ -379,10 +436,10 @@ export default function NewRoadmapPage() {
                   </div>
                   <div className="flex-shrink-0 text-sm text-slate-500">{m.estimated_dates || ''}</div>
                 </div>
-                {m.sub_tasks?.length ? (
-                  <ul className="mt-3 list-disc pl-5 text-sm text-slate-700 marker:text-slate-400">
-                    {m.sub_tasks.map((task, ti) => (
-                      <li key={ti} className="leading-relaxed">{task}</li>
+                {Array.isArray((m as any).subbab) && (m as any).subbab.length ? (
+                  <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                    {(m as any).subbab.map((title: string, ti: number) => (
+                      <li key={ti} className="leading-relaxed list-disc list-inside text-slate-700">{title}</li>
                     ))}
                   </ul>
                 ) : null}
@@ -403,11 +460,23 @@ export default function NewRoadmapPage() {
     ) : (
   <div className="flex h-full">
   <div className="w-[400px] bg-white dark:bg-black p-8 flex flex-col flex-shrink-0 border-r border-slate-200 dark:border-slate-800">
-        {!roadmapData ? (
+        {!roadmapData || newFormOpen ? (
           <>
-            <header>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Buat Roadmap Baru</h1>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Isi detail di bawah untuk memulai.</p>
+            <header className={"flex items-center justify-between gap-3"}>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">Buat Roadmap Baru</h1>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 truncate">Isi detail di bawah untuk memulai.</p>
+              </div>
+              {roadmapData ? (
+                <button
+                  type="button"
+                  onClick={() => setNewFormOpen(false)}
+                  className="inline-flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  title="Kembali ke Edit AI"
+                >
+                  <FilePlus2 className="h-4 w-4" />
+                </button>
+              ) : null}
             </header>
             <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
               {/* Pilih mode prompt */}
@@ -423,43 +492,72 @@ export default function NewRoadmapPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {/* 1. Topik Utama */}
                     <div>
                       <label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1.5">Topik Utama</label>
                       <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required/>
                     </div>
+                    {/* 2. Level Pengguna */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Hari Tersedia</label>
-                      <div className="grid grid-cols-3 gap-2 text-xs text-center">
-                        <button type="button" onClick={() => setAvailableDays('all')} className={`p-2 border rounded-md ${availableDays === 'all' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Semua</button>
-                        <button type="button" onClick={() => setAvailableDays('weekdays')} className={`p-2 border rounded-md ${availableDays === 'weekdays' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Kerja</button>
-                        <button type="button" onClick={() => setAvailableDays('weekends')} className={`p-2 border rounded-md ${availableDays === 'weekends' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Akhir Pekan</button>
-                      </div>
+                      <label htmlFor="userLevel" className="block text-sm font-medium text-slate-700 mb-1.5">Level Pengguna</label>
+                      <select
+                        id="userLevel"
+                        value={userLevel}
+                        onChange={(e) => setUserLevel(e.target.value as any)}
+                        className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                      >
+                        <option value="beginner">Baru mulai dari nol</option>
+                        <option value="intermediate">{`Sudah paham dasar-dasar ${topic || 'topik ini'}`}</option>
+                        <option value="pro">Profesional yang ingin menambah skill</option>
+                      </select>
                     </div>
-                    <div>
-                      <label htmlFor="duration" className="block text-sm font-medium text-slate-700 mb-1.5">Durasi Belajar per Hari</label>
-                      <div className="flex items-center gap-2">
-                        <input id="duration" type="range" min="1" max="8" value={dailyDuration} onChange={(e) => setDailyDuration(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"/>
-                        <span className="text-sm font-semibold text-slate-600 w-16 text-right">{dailyDuration} jam</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Mulai <span className="text-slate-400">(Opsional)</span></label>
-                        <input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                      </div>
-                      <div>
-                        <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Selesai <span className="text-slate-400">(Opsional)</span></label>
-                        <input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                      </div>
-                    </div>
+                    {/* 3. Tujuan Akhir */}
                     <div>
                       <label htmlFor="goal" className="block text-sm font-medium text-slate-700 mb-1.5">Tujuan Akhir <span className="text-slate-400">(Opsional)</span></label>
                       <input id="goal" type="text" value={finalGoal} onChange={(e) => setFinalGoal(e.target.value)} placeholder="Contoh: Lulus ujian sertifikasi" className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
                     </div>
+                    {/* 4. Pengaturan Waktu (toggle) */}
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-700">Pengaturan Waktu</span>
+                        <button type="button" onClick={() => setEnableTimeOptions(v=>!v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enableTimeOptions ? 'bg-blue-600' : 'bg-slate-300'}`} aria-pressed={enableTimeOptions} aria-label="Toggle waktu">
+                          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${enableTimeOptions ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                      {enableTimeOptions && (
+                        <div className="mt-3 space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Hari Tersedia</label>
+                            <div className="grid grid-cols-3 gap-2 text-xs text-center">
+                              <button type="button" onClick={() => setAvailableDays('all')} className={`p-2 border rounded-md ${availableDays === 'all' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Semua</button>
+                              <button type="button" onClick={() => setAvailableDays('weekdays')} className={`p-2 border rounded-md ${availableDays === 'weekdays' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Kerja</button>
+                              <button type="button" onClick={() => setAvailableDays('weekends')} className={`p-2 border rounded-md ${availableDays === 'weekends' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Akhir Pekan</button>
+                            </div>
+                          </div>
+                          <div>
+                            <label htmlFor="duration" className="block text-sm font-medium text-slate-700 mb-1.5">Durasi Belajar per Hari</label>
+                            <div className="flex items-center gap-2">
+                              <input id="duration" type="range" min="1" max="8" value={dailyDuration} onChange={(e) => setDailyDuration(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"/>
+                              <span className="text-sm font-semibold text-slate-600 w-16 text-right">{dailyDuration} jam</span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Mulai <span className="text-slate-400">(Opsional)</span></label>
+                              <input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                            </div>
+                            <div>
+                              <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Selesai <span className="text-slate-400">(Opsional)</span></label>
+                              <input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-              <div className="mt-auto pt-6">
+              <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-black pt-6 pb-2">
                 <button type="submit" disabled={isLoading} className="w-full px-4 py-3 font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed">{isLoading ? 'Membuat Roadmap...' : 'Buat Roadmap'}</button>
               </div>
             </form>
@@ -467,9 +565,20 @@ export default function NewRoadmapPage() {
           </>
         ) : (
           <>
-            <header>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Roadmap Baru</h1>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Edit dengan AI</p>
+            <header className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Edit Roadmap Dengan AI</h1>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 truncate">Gunakan instruksi untuk memodifikasi roadmap Anda.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNewFormOpen((v)=>!v)}
+                className="inline-flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                title="Buat Roadmap Baru"
+                aria-pressed={newFormOpen}
+              >
+                <FilePlus2 className="h-4 w-4" />
+              </button>
             </header>
             <div className="mt-4">
               <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
@@ -508,7 +617,7 @@ export default function NewRoadmapPage() {
             <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
               <div>
                 <div className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Judul Roadmap</div>
-                <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100">{roadmapTitle || topic}</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100">{roadmapTitle || activeTopic}</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -545,10 +654,11 @@ export default function NewRoadmapPage() {
                 <button
                   type="button"
                   onClick={handleSaveRoadmap}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  title="Simpan Roadmap"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+                  title={saving ? 'Menyimpan…' : 'Simpan Roadmap'}
                 >
-                  Simpan
+                  {saving ? 'Menyimpan…' : 'Simpan'}
                 </button>
               </div>
             </div>
@@ -563,7 +673,7 @@ export default function NewRoadmapPage() {
             showTextView ? (
               <RoadmapTextView data={roadmapData} onClick={handleNodeClick} />
             ) : (
-              <RoadmapGraph data={roadmapData} onNodeClick={handleNodeClick} promptMode={promptMode} />
+              <RoadmapGraph data={roadmapData} onNodeClick={handleNodeClick} promptMode={activePromptMode} />
             )
           ) : (
             <RoadmapPlaceholder isLoading={isLoading} />
@@ -571,7 +681,7 @@ export default function NewRoadmapPage() {
         </div>
       </div>
       
-      {selectedMilestone && ( <MindmapModal isLoading={isModalLoading} mindmapData={mindmapData} explanation={explanation} onClose={() => setSelectedMilestone(null)} topic={selectedMilestone.topic} /> )}
+  {selectedMilestone && ( <MindmapModal isLoading={isModalLoading} mindmapData={mindmapData} explanation={explanation} resources={resources} onClose={() => setSelectedMilestone(null)} topic={selectedMilestone.topic} /> )}
     </div>
     )
   );

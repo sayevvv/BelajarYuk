@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next"; // Impor getServerSession
 import { authOptions } from "@/auth.config";      // Impor authOptions yang sudah kita buat
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   // Gunakan getServerSession dengan authOptions untuk mendapatkan sesi
@@ -17,6 +16,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { title, content } = body;
+
+    if (!title || !content) {
+      return NextResponse.json({ error: "Missing title or content" }, { status: 400 });
+    }
 
     // Pastikan user benar-benar ada di database untuk menghindari FK error
     let userId = session.user.id as string;
@@ -32,10 +35,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found. Please sign in again." }, { status: 401 });
     }
 
-    const newRoadmap = await (prisma as any).roadmap.create({
+    // Idempotency: compute content hash
+    let hash: string | null = null;
+    try { hash = crypto.createHash('sha256').update(JSON.stringify(content ?? {})).digest('hex'); } catch {}
+
+    if (hash) {
+      const same = await (prisma as any).roadmap.findFirst({ where: { userId, title, contentHash: hash }, include: { progress: true }, orderBy: { createdAt: 'desc' } });
+      if (same) return NextResponse.json(same, { status: 200, headers: { 'x-deduped': 'true' } });
+    } else {
+      // Fallback JSON compare if hash not available
+      const lastSameTitle = await (prisma as any).roadmap.findFirst({ where: { userId, title }, orderBy: { createdAt: 'desc' }, include: { progress: true } });
+      if (lastSameTitle) {
+        try {
+          const a = JSON.stringify(lastSameTitle.content ?? {});
+          const b = JSON.stringify(content ?? {});
+          if (a === b) return NextResponse.json(lastSameTitle, { status: 200, headers: { 'x-deduped': 'true' } });
+        } catch {}
+      }
+    }
+
+  const newRoadmap = await (prisma as any).roadmap.create({
       data: {
         title,
         content,
+    contentHash: hash,
         userId, // id yang terverifikasi benar-benar ada di DB
         progress: {
           create: {

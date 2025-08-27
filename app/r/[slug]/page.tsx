@@ -1,5 +1,7 @@
 // app/r/[slug]/page.tsx
 import SaveRoadmapButton from '@/components/SaveRoadmapButton';
+import RoadmapGraph from '@/components/RoadmapGraph';
+import { Suspense } from 'react';
 
 async function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
@@ -30,26 +32,31 @@ export default async function PublicRoadmapPage(props: any) {
           <SaveRoadmapButton roadmapId={(roadmap as any).id} />
         </div>
       </header>
-      <div className="p-8">
-        <div className="text-slate-700 dark:text-slate-300">
-          <div className="text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Durasi</div>
-          <div className="font-semibold dark:text-slate-100">{content?.duration || '-'}</div>
+      <ClientPublicRoadmap content={content} />
+    </div>
+  );
+}
+
+"use client";
+import { useState } from 'react';
+
+function ClientPublicRoadmap({ content }: { content: any }) {
+  const [startDate, setStartDate] = useState<string>('');
+  return (
+    <div className="p-8">
+      <div className="text-slate-700 dark:text-slate-300">
+        <div className="text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Durasi</div>
+        <div className="font-semibold dark:text-slate-100">{content?.duration || '-'}</div>
+      </div>
+      <div className="mt-4 flex items-end gap-3">
+        <div>
+          <label htmlFor="startDatePublic" className="block text-xs font-medium text-slate-600 dark:text-slate-300">Mulai dari Tanggal</label>
+          <input id="startDatePublic" type="date" value={startDate} onChange={(e)=>setStartDate(e.target.value)} className="mt-1 w-52 px-3 py-1.5 text-sm border rounded-md border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100" />
         </div>
-        <ol className="mt-6 space-y-4">
-          {content?.milestones?.map((m: any, idx: number) => (
-            <li key={idx} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-              <div className="text-xs font-semibold tracking-widest uppercase text-blue-600">{m.timeframe || `Tahap ${idx + 1}`}</div>
-              <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{m.topic}</h3>
-              {m.sub_tasks?.length ? (
-                <ul className="mt-3 list-disc pl-5 text-sm text-slate-700 dark:text-slate-300 marker:text-slate-400">
-                  {m.sub_tasks.map((task: string, ti: number) => (
-                    <li key={ti} className="leading-relaxed">{task}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          ))}
-        </ol>
+        <div className="text-xs text-slate-500 dark:text-slate-400">Tanggal di setiap milestone akan menyesuaikan.</div>
+      </div>
+      <div className="mt-6 h-[70vh] border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+        <RoadmapGraph data={{ milestones: content?.milestones || [] }} onNodeClick={()=>{}} promptMode={'advanced'} startDate={startDate || undefined} />
       </div>
     </div>
   );
