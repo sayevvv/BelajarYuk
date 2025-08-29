@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import ReactFlow, { 
   Background, 
   Controls, 
@@ -39,15 +39,19 @@ interface Milestone {
 }
 
 interface MilestoneNodeData {
+  index: number;
   milestone: Milestone;
   onNodeClick: (node: Milestone) => void;
+  onStartClick?: (milestoneIndex: number) => void;
+  onSubbabClick?: (milestoneIndex: number, subIndex: number, title: string) => void;
+  startButtonLabel?: string;
   promptMode: 'simple' | 'advanced';
   durationDays?: number;
   computedDates?: string; // computed from startDate and cumulative offsets
 }
 
 const MilestoneNode = memo(({ data, selected }: NodeProps<MilestoneNodeData>) => {
-  const { milestone, onNodeClick, promptMode, durationDays, computedDates } = data;
+  const { index, milestone, onNodeClick, onStartClick, onSubbabClick, startButtonLabel, promptMode, durationDays, computedDates } = data;
 
   return (
     <div className="flex flex-col w-full p-4 text-left transition-colors bg-white dark:bg-[#0a0a0a] border shadow-md rounded-lg border-slate-200 dark:border-[#1f1f1f] hover:border-blue-500" style={{ minHeight: 180 }}>
@@ -92,22 +96,31 @@ const MilestoneNode = memo(({ data, selected }: NodeProps<MilestoneNodeData>) =>
           {(milestone.subbab && milestone.subbab.length > 0
             ? milestone.subbab
             : (milestone.sub_tasks || []).map((stRaw) => (typeof stRaw === 'string' ? stRaw : (stRaw as any).task)))
-            .map((title, index) => (
-              <li key={index} className="list-disc list-inside">{title}</li>
+            .map((title, ti) => (
+              <li
+                key={ti}
+                className={`list-disc list-inside ${onSubbabClick ? 'cursor-pointer hover:underline' : ''}`}
+                onClick={onSubbabClick ? () => onSubbabClick(index, ti, String(title)) : undefined}
+                role={onSubbabClick ? 'button' : undefined}
+                aria-label={onSubbabClick ? `Buka materi ${title}` : undefined}
+              >
+                {title}
+              </li>
             ))}
         </ul>
       </div>
-  <button onClick={() => onNodeClick(milestone)} className="mt-4 w-full px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0">
-        Jabarkan Materi
+      <button
+        onClick={() => (onStartClick ? onStartClick(index) : onNodeClick(milestone))}
+        className="mt-4 w-full px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
+      >
+        {startButtonLabel || 'Jabarkan Materi'}
       </button>
     </div>
   );
 });
 MilestoneNode.displayName = 'MilestoneNode';
 
-const nodeTypes = {
-  milestone: MilestoneNode,
-};
+const baseNodeTypes = { milestone: MilestoneNode } as const;
 
 const NODE_WIDTH = 320;
 const DEFAULT_NODE_HEIGHT = 240; // fallback height before measurement
@@ -128,7 +141,8 @@ const generateFlowElements = (
   milestones: Milestone[],
   onNodeClick: (node: Milestone) => void,
   promptMode: 'simple' | 'advanced',
-  startDate?: string
+  startDate?: string,
+  options?: { onStartClick?: (mi: number) => void; onSubbabClick?: (mi: number, si: number, title: string) => void; startButtonLabel?: string }
 ): { initialNodes: Node[], initialEdges: Edge[] } => {
   const initialNodes: Node[] = [];
   const initialEdges: Edge[] = [];
@@ -158,7 +172,7 @@ const generateFlowElements = (
       id: nodeId,
       type: 'milestone',
       position: { x, y },
-  data: { milestone, onNodeClick, promptMode, durationDays, computedDates },
+      data: { index: index, milestone, onNodeClick, promptMode, durationDays, computedDates, onStartClick: options?.onStartClick, onSubbabClick: options?.onSubbabClick, startButtonLabel: options?.startButtonLabel },
   style: { width: NODE_WIDTH, padding: 0, border: 'none', borderRadius: '12px', backgroundColor: 'transparent' },
     });
 
@@ -197,9 +211,10 @@ const generateFlowElements = (
   return { initialNodes, initialEdges };
 };
 
-export default function RoadmapGraph({ data, onNodeClick, promptMode, startDate, showMiniMap = false }: { data: { milestones: any[] }, onNodeClick: (milestone: any) => void, promptMode: 'simple' | 'advanced', startDate?: string, showMiniMap?: boolean }) {
+export default function RoadmapGraph({ data, onNodeClick, promptMode, startDate, showMiniMap = false, onStartClick, onSubbabClick, startButtonLabel }: { data: { milestones: any[] }, onNodeClick: (milestone: any) => void, promptMode: 'simple' | 'advanced', startDate?: string, showMiniMap?: boolean, onStartClick?: (mi: number) => void, onSubbabClick?: (mi: number, si: number, title: string) => void, startButtonLabel?: string }) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const nodeTypes = useMemo(() => ({ ...baseNodeTypes }), []);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const zoomRef = useRef(1);
   const lastAppliedPositionsRef = useRef<number[]>([]);
@@ -213,19 +228,25 @@ export default function RoadmapGraph({ data, onNodeClick, promptMode, startDate,
     const key = `${promptMode}::${JSON.stringify(data.milestones)}`;
     if (sourceKeyRef.current === key) return;
     sourceKeyRef.current = key;
-  const { initialNodes, initialEdges } = generateFlowElements(data.milestones, onNodeClick, promptMode, startDate);
+    const { initialNodes, initialEdges } = generateFlowElements(
+      data.milestones,
+      onNodeClick,
+      promptMode,
+      startDate,
+      { onStartClick, onSubbabClick, startButtonLabel }
+    );
     setNodes(initialNodes);
     setEdges(initialEdges);
     needsLayoutRef.current = true;
   }, [data.milestones, promptMode, onNodeClick, startDate]);
 
-  // Keep onNodeClick fresh without rebuilding positions
+  // Keep callbacks fresh without rebuilding positions
   useEffect(() => {
     setNodes((prev) => prev.map((n) => ({
       ...n,
-      data: { ...(n.data as any), onNodeClick },
+      data: { ...(n.data as any), onNodeClick, onStartClick, onSubbabClick, startButtonLabel },
     })));
-  }, [onNodeClick]);
+  }, [onNodeClick, onStartClick, onSubbabClick, startButtonLabel]);
 
   // After nodes render, measure actual node heights per row and adjust Y offsets to max height per row
   useEffect(() => {

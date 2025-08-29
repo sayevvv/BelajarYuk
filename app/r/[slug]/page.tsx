@@ -1,7 +1,9 @@
 // app/r/[slug]/page.tsx
 import SaveRoadmapButton from '@/components/SaveRoadmapButton';
-import RoadmapGraph from '@/components/RoadmapGraph';
+import PublicRoadmapClient from '@/components/PublicRoadmapClient';
 import { Suspense } from 'react';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 async function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
@@ -26,38 +28,23 @@ export default async function PublicRoadmapPage(props: any) {
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-black">
       <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{(roadmap as any).title}</h1>
-        <div className="mt-1 text-slate-500 dark:text-slate-400">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
-        <div className="mt-4">
-          <SaveRoadmapButton roadmapId={(roadmap as any).id} />
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/dashboard/browse" className="inline-flex items-center justify-center rounded-full h-9 w-9 text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-neutral-300 dark:hover:text-white dark:hover:bg-[#1a1a1a]" aria-label="Kembali">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">{(roadmap as any).title}</h1>
+              <div className="mt-1 text-slate-500 dark:text-slate-400">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
+            </div>
+          </div>
+          <div className="mt-1">
+            <SaveRoadmapButton roadmapId={(roadmap as any).id} />
+          </div>
         </div>
       </header>
-      <ClientPublicRoadmap content={content} />
+  <PublicRoadmapClient content={content} />
     </div>
   );
 }
 
-"use client";
-import { useState } from 'react';
-
-function ClientPublicRoadmap({ content }: { content: any }) {
-  const [startDate, setStartDate] = useState<string>('');
-  return (
-    <div className="p-8">
-      <div className="text-slate-700 dark:text-slate-300">
-        <div className="text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Durasi</div>
-        <div className="font-semibold dark:text-slate-100">{content?.duration || '-'}</div>
-      </div>
-      <div className="mt-4 flex items-end gap-3">
-        <div>
-          <label htmlFor="startDatePublic" className="block text-xs font-medium text-slate-600 dark:text-slate-300">Mulai dari Tanggal</label>
-          <input id="startDatePublic" type="date" value={startDate} onChange={(e)=>setStartDate(e.target.value)} className="mt-1 w-52 px-3 py-1.5 text-sm border rounded-md border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100" />
-        </div>
-        <div className="text-xs text-slate-500 dark:text-slate-400">Tanggal di setiap milestone akan menyesuaikan.</div>
-      </div>
-      <div className="mt-6 h-[70vh] border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
-        <RoadmapGraph data={{ milestones: content?.milestones || [] }} onNodeClick={()=>{}} promptMode={'advanced'} startDate={startDate || undefined} />
-      </div>
-    </div>
-  );
-}

@@ -48,7 +48,7 @@ export default function RoadmapGridClient({ items }: { items: RoadmapItem[] }) {
             {gated ? (
               <div className="mt-4 text-xs text-slate-500">Roadmap akan bisa dibuka setelah materi selesai disiapkan.</div>
             ) : (
-              <Link href={`/dashboard/roadmaps/${r.id}`} className="mt-4 inline-block rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200">Buka</Link>
+              <Link href={`/dashboard/roadmaps/${r.id}?from=roadmaps`} className="mt-4 inline-block rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200">Buka</Link>
             )}
           </div>
         );

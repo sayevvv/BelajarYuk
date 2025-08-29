@@ -1,5 +1,7 @@
 // app/dashboard/roadmaps/[id]/quiz/page.tsx
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/auth.config';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -12,11 +14,16 @@ async function getRoadmap(id: string) {
 export default async function QuizPage(props: any) {
   const { id } = await (props as any).params;
   const sp = await (props as any).searchParams;
-  const roadmap = await getRoadmap(id);
+  const session = (await getServerSession(authOptions as any)) as any;
+  if (!session?.user?.id) return notFound();
+  const roadmap = await prisma.roadmap.findFirst({ where: { id, userId: session.user.id } });
   if (!roadmap) return notFound();
-  const m = Number((sp?.m as any) ?? 0);
+  const rawM = Number((sp?.m as any) ?? 0) || 0;
+  const content0: any = (roadmap as any).content || {};
+  const byM0: any[][] = Array.isArray(content0.materialsByMilestone) ? content0.materialsByMilestone : [];
+  const m = Math.min(Math.max(0, rawM), Math.max(0, byM0.length - 1));
   const quizNumber = m + 1;
-  const content: any = (roadmap as any).content || {};
+  const content: any = content0;
   const byMilestone: any[][] = content.materialsByMilestone || [];
   const milestones: any[] = Array.isArray(content.milestones) ? content.milestones : [];
   const milestone = milestones[m];

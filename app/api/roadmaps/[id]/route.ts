@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth.config";
 import { PrismaClient } from "@prisma/client";
+import { assertSameOrigin } from "@/lib/security";
 
 const prisma = new PrismaClient();
 
@@ -20,6 +21,7 @@ export async function GET(_req: NextRequest, ctx: any) {
 
 export async function DELETE(_req: NextRequest, ctx: any) {
   const { id } = await (ctx as any).params;
+  try { assertSameOrigin(_req as any); } catch (e: any) { return NextResponse.json({ error: 'Forbidden' }, { status: e?.status || 403 }); }
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

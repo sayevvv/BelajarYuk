@@ -65,7 +65,7 @@ export default async function HistoryPage() {
             {roadmaps.map((roadmap) => {
               const content = roadmap.content as unknown as RoadmapContent;
               return (
-                <Link href={`/dashboard/roadmaps/${roadmap.id}`} key={roadmap.id} className="block bg-slate-50 p-6 rounded-xl border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all">
+                <Link href={`/dashboard/roadmaps/${roadmap.id}?from=history`} key={roadmap.id} className="block bg-slate-50 p-6 rounded-xl border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all">
                   <h3 className="font-bold text-slate-800 text-lg truncate">{roadmap.title}</h3>
                   <div className="flex items-center gap-2 text-sm text-slate-500 mt-2">
                     <Clock className="h-4 w-4" />

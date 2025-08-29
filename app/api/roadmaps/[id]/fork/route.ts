@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth.config";
 import { prisma } from "@/lib/prisma";
+import { assertSameOrigin } from "@/lib/security";
 
 // Note: Relax ctx typing to avoid RouteContext ParamCheck mismatch in Next 15.
 export async function POST(_req: NextRequest, ctx: any) {
+  try { assertSameOrigin(_req as any); } catch (e: any) { return NextResponse.json({ error: 'Forbidden' }, { status: e?.status || 403 }); }
   const { id } = await (ctx as any).params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

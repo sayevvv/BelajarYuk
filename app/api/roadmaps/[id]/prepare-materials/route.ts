@@ -5,8 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
+import { assertSameOrigin } from "@/lib/security";
 
 export async function POST(_req: NextRequest, ctx: any) {
+  try { assertSameOrigin(_req as any); } catch (e: any) { return NextResponse.json({ error: 'Forbidden' }, { status: e?.status || 403 }); }
   const { id } = await (ctx as any).params;
   const session = (await getServerSession(authOptions as any)) as any;
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -62,9 +64,11 @@ Instruksi:
       const details = `- ${sub}`;
       const p = await prompt.format({ topic: `${m.topic} — ${sub}`, subbab: details });
       const res = await model.invoke([{ role: 'user', content: p }] as any);
-      const text = (res as any)?.content?.[0]?.text || (res as any)?.content || '';
+  let text = (res as any)?.content?.[0]?.text || (res as any)?.content || '';
+  text = String(text).slice(0, 5000); // cap body length per subbab
       const hero = `https://source.unsplash.com/1200x500/?${encodeURIComponent(sub)}`;
-      items.push({ milestoneIndex: i, subIndex: j, title: sub, body: String(text || '').trim(), points: [], heroImage: hero });
+  const safeTitle = String(sub || '').slice(0, 200);
+  items.push({ milestoneIndex: i, subIndex: j, title: safeTitle, body: String(text || '').trim(), points: [], heroImage: hero });
     }
     materialsByMilestone.push(items);
   }

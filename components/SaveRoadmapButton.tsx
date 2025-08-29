@@ -23,7 +23,7 @@ export default function SaveRoadmapButton({ roadmapId }: { roadmapId: string }) 
       }
       const data = await res.json();
       show({ type: 'success', title: 'Tersimpan', message: 'Roadmap disalin ke Roadmap Saya.' });
-      router.push(`/dashboard/roadmaps/${data.id}`);
+  router.push(`/dashboard/roadmaps/${data.id}?from=browse`);
     } catch (e) {
       console.error(e);
       show({ type: 'error', title: 'Gagal', message: (e as Error).message });

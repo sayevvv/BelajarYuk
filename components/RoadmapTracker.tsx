@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/ToastProvider';
 import RoadmapGraph from './RoadmapGraph';
-import { LayoutList, GitBranch, CheckCircle } from 'lucide-react';
+import { LayoutList, GitBranch, CheckCircle, ArrowLeft } from 'lucide-react';
 
 type Roadmap = {
   id: string;
@@ -18,6 +18,7 @@ type Roadmap = {
 
 export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { show } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +86,11 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ publish }),
       });
-      if (!res.ok) throw new Error('Gagal memperbarui publikasi');
+      if (!res.ok) {
+        let msg = 'Gagal memperbarui publikasi';
+        try { const j = await res.json(); if (j?.error) msg = j.error; } catch {}
+        throw new Error(msg);
+      }
       const rj = await res.json();
       setRoadmap((prev) => ({ ...(prev as any), ...rj }));
     } catch (e: any) {
@@ -119,13 +124,38 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
     return <div className="p-6">Roadmap tidak ditemukan.</div>;
   }
 
+  // Compute a consistent back target based on query ?from= and referrer
+  const backHref = (() => {
+    const from = (searchParams?.get('from') || '').toLowerCase();
+    if (from === 'browse') return '/dashboard/browse';
+    if (from === 'history') return '/dashboard/history';
+    if (from === 'roadmaps' || from === 'mine' || from === 'my') return '/dashboard/roadmaps';
+    try {
+      const ref = document?.referrer || '';
+      if (/\/dashboard\/browse/.test(ref)) return '/dashboard/browse';
+      if (/\/dashboard\/history/.test(ref)) return '/dashboard/history';
+    } catch {}
+    return '/dashboard/roadmaps';
+  })();
+
   return (
     <div className="h-full overflow-hidden bg-white dark:bg-black flex flex-col">
       {/* Header */}
       <header className="flex items-center justify-between gap-4 p-6 border-b border-slate-200 dark:border-[#1f1f1f] sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
-        <div>
-          <div className="text-[11px] uppercase tracking-wider text-slate-500">Rencana Belajar</div>
-          <h1 className="text-2xl font-bold text-slate-900">{roadmap.title}</h1>
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={() => router.push(backHref)}
+            className="inline-flex items-center justify-center rounded-full h-9 w-9 text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-neutral-300 dark:hover:text-white dark:hover:bg-[#1a1a1a]"
+            title="Kembali"
+            aria-label="Kembali"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="min-w-0">
+            <div className="text-[11px] uppercase tracking-wider text-slate-500">Rencana Belajar</div>
+            <h1 className="text-2xl font-bold text-slate-900 truncate">{roadmap.title}</h1>
+          </div>
         </div>
   <div className="flex items-center gap-3">
           {/* View toggle */}
@@ -153,14 +183,21 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             <Link href={`/r/${roadmap.slug}`} className="rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-semibold hover:bg-slate-800" target="_blank">Lihat Publik</Link>
           ) : null}
           <Link href={`/dashboard/roadmaps/${roadmap.id}/read`} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700">Mulai Belajar</Link>
-          <button
-            type="button"
-            disabled={publishing || !!(roadmap as any).sourceId}
-            onClick={() => handlePublish(!(roadmap as any).published)}
-            className={`rounded-lg px-3 py-2 text-sm font-semibold ${ (roadmap as any).published ? 'bg-slate-200 text-slate-800 hover:bg-slate-300' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-          >
-            {(roadmap as any).sourceId ? 'Tidak dapat dipublikasi (hasil simpan)' : ((roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan')}
-          </button>
+          {!(roadmap as any).sourceId && (
+            <button
+              type="button"
+              disabled={publishing || ((progress?.percent ?? 0) < 100 && !(roadmap as any).published)}
+              onClick={() => handlePublish(!(roadmap as any).published)}
+              title={
+                ((progress?.percent ?? 0) < 100 && !(roadmap as any).published)
+                  ? 'Selesaikan semua materi hingga 100% untuk mempublikasikan'
+                  : ((roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan')
+              }
+              className={`rounded-lg px-3 py-2 text-sm font-semibold ${ (roadmap as any).published ? 'bg-slate-200 text-slate-800 hover:bg-slate-300' : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed'}`}
+            >
+              {(roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan'}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleDelete}
@@ -190,6 +227,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             <RoadmapGraph
               data={{ milestones: milestones as any }}
               onNodeClick={(m: any) => {
+                // Keep info toast behavior if needed; navigate via Start button instead
                 const first = Array.isArray((m as any).subbab) && (m as any).subbab.length > 0
                   ? (m as any).subbab[0]
                   : (Array.isArray((m as any).sub_tasks) && (m as any).sub_tasks.length > 0
@@ -197,6 +235,14 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                     : undefined);
                 show({ type: 'info', title: m.topic, message: first || m.timeframe });
               }}
+              onStartClick={(mi: number) => {
+                // Mirror checklist behavior: go to first subbab of that milestone
+                router.push(`/dashboard/roadmaps/${(roadmap as any).id}/read?m=${mi}&s=0`);
+              }}
+              onSubbabClick={(mi: number, si: number) => {
+                router.push(`/dashboard/roadmaps/${(roadmap as any).id}/read?m=${mi}&s=${si}`);
+              }}
+              startButtonLabel="Mulai Belajar"
               promptMode={'simple'}
               showMiniMap={false}
             />

@@ -3,8 +3,10 @@ import { getServerSession } from "next-auth/next"; // Impor getServerSession
 import { authOptions } from "@/auth.config";      // Impor authOptions yang sudah kita buat
 import { prisma } from "@/lib/prisma";
 import crypto from 'crypto';
+import { assertSameOrigin } from "@/lib/security";
 
 export async function POST(req: NextRequest) {
+  try { assertSameOrigin(req as any); } catch (e: any) { return NextResponse.json({ error: 'Forbidden' }, { status: e?.status || 403 }); }
   // Gunakan getServerSession dengan authOptions untuk mendapatkan sesi
   const session = await getServerSession(authOptions);
 
