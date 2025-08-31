@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/ToastProvider';
 import RoadmapGraph from './RoadmapGraph';
 import { LayoutList, GitBranch, CheckCircle, ArrowLeft } from 'lucide-react';
+import RatingSummary from '@/components/RatingSummary';
+import TopicChips from '@/components/TopicChips';
+import dynamic from 'next/dynamic';
+const TopicSelector = dynamic(() => import('@/components/TopicSelector'), { ssr: false });
 
 type Roadmap = {
   id: string;
@@ -20,11 +25,13 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { show } = useToast();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [progress, setProgress] = useState<{ completedTasks: Record<string, boolean>; percent: number } | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [showTopicModal, setShowTopicModal] = useState(false);
   const [view, setView] = useState<'graph' | 'checklist'>('graph');
   // Start-date disabled for saved roadmaps
 
@@ -78,7 +85,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const milestones: Array<{ timeframe: string; topic: string; subbab?: string[]; sub_tasks?: Array<string | { task: string; type?: string }> }>
     = useMemo(() => (roadmap?.content?.milestones || []) as any, [roadmap]);
 
-  const handlePublish = async (publish: boolean) => {
+  const doPublish = async (publish: boolean) => {
     try {
       setPublishing(true);
       const res = await fetch(`/api/roadmaps/${roadmapId}/publish`, {
@@ -99,6 +106,15 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
     } finally {
       setPublishing(false);
     }
+  };
+
+  const handlePublish = async (publish: boolean) => {
+    if (publish) {
+      // Open topic modal so author can review/override before publishing
+      setShowTopicModal(true);
+      return;
+    }
+    return doPublish(false);
   };
 
   const handleDelete = async () => {
@@ -182,6 +198,14 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
           {roadmap.published && roadmap.slug ? (
             <Link href={`/r/${roadmap.slug}`} className="rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-semibold hover:bg-slate-800" target="_blank">Lihat Publik</Link>
           ) : null}
+          <TopicChips roadmapId={(roadmap as any).id} />
+          <RatingSummary
+            roadmapId={(roadmap as any).sourceId || (roadmap as any).id}
+            canRate={
+              !!(roadmap as any).sourceId
+              || (!!(roadmap as any).published && !!(roadmap as any).slug && (roadmap as any).user?.id !== (session as any)?.user?.id)
+            }
+          />
           <Link href={`/dashboard/roadmaps/${roadmap.id}/read`} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700">Mulai Belajar</Link>
           {!(roadmap as any).sourceId && (
             <button
@@ -207,6 +231,29 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
           </button>
         </div>
       </header>
+
+      {showTopicModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowTopicModal(false)} />
+          <div className="relative bg-white dark:bg-[#0f0f0f] rounded-xl shadow-xl w-[min(720px,92vw)] max-h-[86vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-[#1f1f1f] flex items-center justify-between">
+              <h3 className="text-base font-semibold">Tinjau Topik Sebelum Publikasi</h3>
+              <button className="text-slate-500 hover:text-slate-800" onClick={() => setShowTopicModal(false)}>Tutup</button>
+            </div>
+            <div className="p-5">
+              <div className="mb-3 text-sm text-slate-600">Topik awal digenerate otomatis berdasarkan isi roadmap. Anda dapat menyesuaikan di bawah ini.</div>
+              <TopicSelector roadmapId={roadmap.id} onSaved={() => {}} />
+              <div className="mt-5 flex justify-end gap-2">
+                <button className="px-3 py-1.5 text-sm rounded border" onClick={() => setShowTopicModal(false)}>Batal</button>
+                <button
+                  className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white"
+                  onClick={async () => { setShowTopicModal(false); await doPublish(true); }}
+                >Publikasikan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
   {/* Progress bar */}
       <div className="p-6 border-b border-slate-200 dark:border-[#1f1f1f]">

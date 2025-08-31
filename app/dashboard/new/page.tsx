@@ -259,10 +259,24 @@ export default function NewRoadmapPage() {
       setSaving(true);
   const response = await fetch('/api/roadmaps/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: roadmapTitle || activeTopic, content: roadmapData, }), });
       if (!response.ok) throw new Error("Gagal menyimpan roadmap.");
-      const saved = await response.json();
+  const saved = await response.json();
       show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan!' });
       setIsSaved(true);
-  // Redirect ke daftar "Roadmap Saya" dan jalankan persiapan materi di background
+      // Klasifikasi topik di background
+      try {
+        const payload = {
+          title: roadmapTitle || activeTopic || 'Roadmap',
+          summary: '',
+          milestones: Array.isArray(roadmapData?.milestones) ? roadmapData!.milestones.map(m => m.topic) : [],
+        };
+        if (navigator.sendBeacon) {
+          const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+          navigator.sendBeacon(`/api/roadmaps/${saved.id}/classify`, blob);
+        } else {
+          fetch(`/api/roadmaps/${saved.id}/classify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
+        }
+      } catch {}
+  // Redirect langsung ke daftar roadmaps; topik bisa diedit saat publish
   window.location.href = `/dashboard/roadmaps?created=${saved.id}`;
     } catch (err: any) {
       setError(err.message);
@@ -353,7 +367,7 @@ export default function NewRoadmapPage() {
   // no explicit startNewRoadmap; use icon toggle to open the initial form
 
   // Unsaved changes guard: beforeunload + internal navigation interception
-  const hasUnsaved = !isSaved && !!(
+  const hasUnsaved = !isSaved && !saving && !!(
     // inputs typed or options changed
     simpleDetails.trim() || topic.trim() || finalGoal.trim() || startDate || endDate ||
     promptMode === 'advanced' || availableDays !== 'all' || dailyDuration !== 2 ||
@@ -365,6 +379,73 @@ export default function NewRoadmapPage() {
   useEffect(() => {
     currentUrlRef.current = window.location.href;
   }, []);
+
+  // Prefill form from URL params (support simple/advanced coming from HomeStartBox)
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const mode = sp.get('mode');
+      if (mode === 'advanced') {
+        setPromptMode('advanced');
+        const t = sp.get('topic') || '';
+        if (t) setTopic(t);
+        const lvl = sp.get('level');
+        if (lvl) {
+          // Map 'expert' (from HomeStartBox) to internal 'pro'
+          const mapped = lvl === 'expert' ? 'pro' : (lvl === 'beginner' || lvl === 'intermediate' ? lvl : 'beginner');
+          setUserLevel(mapped as 'beginner' | 'intermediate' | 'pro');
+        }
+        const g = sp.get('goal') || '';
+        if (g) setFinalGoal(g);
+        // Time settings
+        const enableTime = sp.get('enableTime');
+        if (enableTime === '1') {
+          setEnableTimeOptions(true);
+          const ad = sp.get('availableDays');
+          if (ad === 'all' || ad === 'weekdays' || ad === 'weekends') setAvailableDays(ad);
+          const dd = sp.get('dailyDuration');
+          if (dd && !Number.isNaN(Number(dd))) setDailyDuration(Number(dd));
+          const sd = sp.get('startDate');
+          if (sd) setStartDate(sd);
+          const ed = sp.get('endDate');
+          if (ed) setEndDate(ed);
+        }
+      } else if (mode === 'simple') {
+        const q = sp.get('q') || '';
+        if (q) {
+          setPromptMode('simple');
+          setSimpleDetails(q);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Auto-start generation when navigated from Home with params filled
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const mode = sp.get('mode');
+    if (mode === 'simple' && simpleDetails.trim()) {
+      // Slight defer to ensure state is applied
+      const t = setTimeout(() => {
+        // Avoid duplicate submits
+        if (!isLoading && !roadmapData) {
+          const evt = new Event('submit');
+          // Manually call handleSubmit instead of dispatching form event
+          handleSubmit({ preventDefault: () => {} } as any);
+        }
+      }, 0);
+      return () => clearTimeout(t);
+    }
+    if (mode === 'advanced' && (topic.trim() || finalGoal.trim())) {
+      const t = setTimeout(() => {
+        if (!isLoading && !roadmapData) {
+          handleSubmit({ preventDefault: () => {} } as any);
+        }
+      }, 0);
+      return () => clearTimeout(t);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simpleDetails, topic, finalGoal, enableTimeOptions, availableDays, dailyDuration, startDate, endDate]);
 
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -388,7 +469,7 @@ export default function NewRoadmapPage() {
       const url = new URL(href, window.location.origin);
       const same = url.pathname === window.location.pathname && url.search === window.location.search && url.hash === window.location.hash;
       if (same) return;
-      const ok = window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
+  const ok = saving ? true : window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
       if (!ok) {
         e.preventDefault();
         e.stopPropagation();
@@ -399,7 +480,7 @@ export default function NewRoadmapPage() {
     // Handle browser back/forward
   const onPopState = () => {
       if (!hasUnsaved) return;
-      const ok = window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
+      const ok = saving ? true : window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
       if (!ok) {
         // revert to current URL
         history.pushState(null, '', currentUrlRef.current);
@@ -520,9 +601,15 @@ export default function NewRoadmapPage() {
                     <div className="pt-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-slate-700">Pengaturan Waktu</span>
-                        <button type="button" onClick={() => setEnableTimeOptions(v=>!v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enableTimeOptions ? 'bg-blue-600' : 'bg-slate-300'}`} aria-pressed={enableTimeOptions} aria-label="Toggle waktu">
-                          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${enableTimeOptions ? 'translate-x-5' : 'translate-x-1'}`} />
-                        </button>
+                        <label className="inline-flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={enableTimeOptions}
+                            onChange={(e) => setEnableTimeOptions(e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300"
+                          />
+                          <span className="text-sm text-slate-700">Aktif</span>
+                        </label>
                       </div>
                       {enableTimeOptions && (
                         <div className="mt-3 space-y-4">
@@ -679,6 +766,7 @@ export default function NewRoadmapPage() {
             <RoadmapPlaceholder isLoading={isLoading} />
           )}
         </div>
+  {/* Topic selection moved to publish flow */}
       </div>
       
   {selectedMilestone && ( <MindmapModal isLoading={isModalLoading} mindmapData={mindmapData} explanation={explanation} resources={resources} onClose={() => setSelectedMilestone(null)} topic={selectedMilestone.topic} /> )}

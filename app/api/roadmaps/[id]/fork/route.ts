@@ -18,6 +18,15 @@ export async function POST(_req: NextRequest, ctx: any) {
   // Idempotency: if the user already forked this source, return that roadmap instead of creating a duplicate
   const existing = await (prisma as any).roadmap.findFirst({ where: { userId: session.user.id, sourceId: source.id }, include: { progress: true } });
   if (existing) {
+    // Still ensure aggregates.forksCount is up to date
+    try {
+      const count = await (prisma as any).roadmap.count({ where: { sourceId: source.id } });
+      await (prisma as any).roadmapAggregates.upsert({
+        where: { roadmapId: source.id },
+        update: { forksCount: count },
+        create: { roadmapId: source.id, forksCount: count },
+      });
+    } catch {}
     return NextResponse.json(existing, { status: 200, headers: { 'x-deduped': 'true' } });
   }
 
@@ -35,6 +44,16 @@ export async function POST(_req: NextRequest, ctx: any) {
       },
       include: { progress: true },
     });
+
+    // Update fork aggregate for the source roadmap
+    try {
+      const count = await (prisma as any).roadmap.count({ where: { sourceId: source.id } });
+      await (prisma as any).roadmapAggregates.upsert({
+        where: { roadmapId: source.id },
+        update: { forksCount: count },
+        create: { roadmapId: source.id, forksCount: count },
+      });
+    } catch {}
 
     return NextResponse.json(cloned, { status: 201 });
   } catch (e: any) {

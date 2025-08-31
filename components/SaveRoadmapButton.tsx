@@ -23,6 +23,13 @@ export default function SaveRoadmapButton({ roadmapId }: { roadmapId: string }) 
       }
       const data = await res.json();
       show({ type: 'success', title: 'Tersimpan', message: 'Roadmap disalin ke Roadmap Saya.' });
+      // Increment unique save counter for the source roadmap (if available)
+      try {
+        const src = (data as any)?.sourceId || roadmapId;
+        if (src) {
+          await fetch(`/api/roadmaps/${src}/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        }
+      } catch {}
   router.push(`/dashboard/roadmaps/${data.id}?from=browse`);
     } catch (e) {
       console.error(e);

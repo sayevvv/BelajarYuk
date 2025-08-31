@@ -1,9 +1,13 @@
 // app/r/[slug]/page.tsx
 import SaveRoadmapButton from '@/components/SaveRoadmapButton';
 import PublicRoadmapClient from '@/components/PublicRoadmapClient';
-import { Suspense } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import RatingSummary from '@/components/RatingSummary';
+import TopicChips from '@/components/TopicChips';
+import { Suspense } from 'react';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/auth.config';
 
 async function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
@@ -25,6 +29,7 @@ export default async function PublicRoadmapPage(props: any) {
   const roadmap = await getData(params.slug);
   if (!roadmap) return <div className="p-8">Tidak ditemukan.</div>;
   const content = (roadmap as any).content as any;
+  const session = (await getServerSession(authOptions as any)) as any;
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-black">
       <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
@@ -38,7 +43,9 @@ export default async function PublicRoadmapPage(props: any) {
               <div className="mt-1 text-slate-500 dark:text-slate-400">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
             </div>
           </div>
-          <div className="mt-1">
+          <div className="mt-1 flex items-center gap-4">
+            <TopicChips roadmapId={(roadmap as any).id} />
+            <RatingSummary roadmapId={(roadmap as any).id} canRate={(roadmap as any).user?.id !== (session as any)?.user?.id} />
             <SaveRoadmapButton roadmapId={(roadmap as any).id} />
           </div>
         </div>
