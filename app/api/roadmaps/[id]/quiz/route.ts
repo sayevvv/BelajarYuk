@@ -51,8 +51,8 @@ Konteks Materi:
   const p = await prompt.format({ context });
   try {
     const res = await model.invoke([{ role: 'user', content: p }] as any);
-    let raw: string = (res as any)?.content?.[0]?.text || (res as any)?.content || '';
-    let text = String(raw).trim();
+  const raw: string = (res as any)?.content?.[0]?.text || (res as any)?.content || '';
+  let text = String(raw).trim();
     // strip markdown fences if present
     if (text.startsWith('```')) {
       const first = text.indexOf('\n');

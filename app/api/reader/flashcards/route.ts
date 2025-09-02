@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = await req.json();
-    let { context, limit = 5, roadmapId: ridTop, m: mTop, s: sTop } = body || ({} as any);
+  const body = await req.json();
+  const { context, limit = 5, roadmapId: ridTop, m: mTop, s: sTop } = body || ({} as any);
     let c = context as any;
     const hasClientCtx = !!(c && (c.title || c.body || (Array.isArray(c.points) && c.points.length)));
     const idCandidate = (c?.roadmapId as string) || (ridTop as string);

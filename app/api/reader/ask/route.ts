@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = await req.json();
-  let { question, context, history, roadmapId: ridTop, m: mTop, s: sTop } = body || ({} as any);
+  const body = await req.json();
+  const { question, context, history, roadmapId: ridTop, m: mTop, s: sTop } = body || ({} as any);
     const q = sanitizeString(String(question || ''), { maxLen: 500 });
     if (!q) return NextResponse.json({ error: 'Question required' }, { status: 400 });
     // If client context is missing or empty, try to fetch from DB using identifiers

@@ -7,7 +7,7 @@ export async function POST(req: NextRequest, ctx: any) {
   // Try to use provided body; else fallback to DB
   const body = await req.json().catch(() => ({}));
   let title = typeof body?.title === 'string' ? body.title : undefined;
-  let summary = typeof body?.summary === 'string' ? body.summary : undefined;
+  const summary = typeof body?.summary === 'string' ? body.summary : undefined;
   let milestones = Array.isArray(body?.milestones) ? body.milestones as string[] : undefined;
 
   if (!title) {

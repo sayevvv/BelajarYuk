@@ -6,7 +6,7 @@ import Link from 'next/link';
 import RoadmapGridClient from '@/components/RoadmapGridClient';
 import RoadmapSortSelect from '@/components/RoadmapSortSelect';
 
-export default async function RoadmapIndexPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+export default async function RoadmapIndexPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const session = (await getServerSession(authOptions as any)) as any;
   if (!session?.user?.id) {
     return (
@@ -18,7 +18,8 @@ export default async function RoadmapIndexPage({ searchParams }: { searchParams?
     );
   }
 
-  const sort = (typeof searchParams?.sort === 'string' ? searchParams?.sort : 'updated_desc') as string;
+  const sp = await searchParams;
+  const sort = (typeof sp?.sort === 'string' ? sp?.sort : 'updated_desc') as string;
   const orderBy: any = (() => {
     switch (sort) {
       case 'updated_asc':
@@ -49,7 +50,7 @@ export default async function RoadmapIndexPage({ searchParams }: { searchParams?
       <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Roadmap Saya</h1>
-          <RoadmapSortSelect current={typeof searchParams?.sort === 'string' ? (searchParams?.sort as string) : 'updated_desc'} />
+          <RoadmapSortSelect current={typeof sp?.sort === 'string' ? (sp?.sort as string) : 'updated_desc'} />
         </div>
       </header>
   <div className="p-8">
