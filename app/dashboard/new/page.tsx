@@ -6,7 +6,6 @@ import { useState, useEffect, useRef, FormEvent, Fragment } from "react";
 import { useToast } from '@/components/ui/ToastProvider';
 import { z } from "zod";
 import RoadmapGraph from "@/components/RoadmapGraph";
-import MindmapGraph from "@/components/MindmapGraph";
 import RoadmapPlaceholder from "@/components/RoadmapPlaceholder"; // Impor komponen baru
 import { Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
@@ -28,22 +27,7 @@ const roadmapSchema = z.object({
 });
 type RoadmapData = z.infer<typeof roadmapSchema>;
 
-const mindmapSchema = z.object({
-  topic: z.string(),
-  subtopics: z.array(
-    z.object({
-      id: z.number(),
-      topic: z.string(),
-      details: z.string(),
-      dependencies: z.array(z.number()),
-    })
-  ),
-});
-type MindmapData = z.infer<typeof mindmapSchema>;
-
-const explanationSchema = z.object({
-  explanation: z.string(),
-});
+// mindmap and AI explanation are no longer used in this page
 
 type Milestone = RoadmapData["milestones"][0];
 
@@ -74,19 +58,54 @@ const TypingBubble = () => (
   </div>
 );
 
-// --- Komponen Modal ---
-const MindmapModal = ({ mindmapData, explanation, resources, isLoading, onClose, topic }: { 
-  mindmapData: MindmapData | null, 
-  explanation: string | null,
-  resources: Array<{ title: string; url: string; source: string }> | null,
-  isLoading: boolean, 
-  onClose: () => void, 
-  topic: string 
-}) => (
-    <Transition as={Fragment} show={true} appear>
-  <div className="fixed inset-0 z-50 flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true"><Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0"><div className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm" /></Transition.Child><Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95"><div className="relative bg-white rounded-2xl shadow-2xl w-[90vw] h-[90vh] flex flex-col overflow-hidden"><header className="flex items-center justify-between flex-shrink-0 p-4 border-b border-slate-200"><h2 className="text-lg font-semibold text-slate-900" id="modal-title">Jabaran Materi: <span className="font-bold text-blue-600">{topic}</span></h2><button onClick={onClose} className="p-1 transition-colors rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100" aria-label="Close modal"><svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button></header><div className="flex flex-grow overflow-hidden"><aside className="w-1/3 p-6 overflow-y-auto border-r border-slate-200 bg-slate-50/50"><h3 className="font-semibold text-slate-800">Penjelasan Lengkap</h3>{isLoading || !explanation ? (<div className="space-y-4 mt-2"><div className="h-4 bg-slate-200 rounded w-5/6 animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-full animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-4/6 animate-pulse"></div><div className="h-4 bg-slate-200 rounded w-full animate-pulse"></div></div>) : (<><p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-slate-600">{explanation}</p>{resources?.length ? (<div className="mt-6"><h4 className="text-sm font-semibold text-slate-700">Sumber Belajar Rekomendasi</h4><ul className="mt-2 space-y-2 text-sm">{resources.map((r, i) => (<li key={i}><a href={r.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{r.title}</a><span className="ml-2 text-xs text-slate-500">({r.source})</span></li>))}</ul></div>) : null}</>)}
-  </aside><main className="relative flex-grow w-2/3">{isLoading ? (<div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50"><span className="font-medium text-slate-600">Membangun mindmap...</span></div>) : (mindmapData ? <MindmapGraph data={mindmapData} /> : <div className="flex items-center justify-center h-full text-slate-400">Mindmap akan muncul di sini.</div>)}</main></div></div></Transition.Child></div>
-    </Transition>
+// --- Modal Detail Node (tanpa AI & mindmap) ---
+const NodeDetailModal = ({ milestone, onClose }: { milestone: Milestone; onClose: () => void }) => (
+  <Transition as={Fragment} show={true} appear>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+        <div className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      </Transition.Child>
+      <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+        <div className="relative bg-white dark:bg-[#0f0f0f] rounded-2xl shadow-2xl w-[min(92vw,720px)] max-h-[80vh] flex flex-col overflow-hidden">
+          <header className="flex items-center justify-between flex-shrink-0 p-4 border-b border-slate-200 dark:border-[#1f1f1f]">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold tracking-widest uppercase text-blue-600 truncate">{milestone.timeframe || 'Tahap'}</div>
+              <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white" id="modal-title">{milestone.topic}</h2>
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-600 dark:text-neutral-400">
+                {milestone.estimated_dates ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-[#121212] px-2 py-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M7 11h5v5H7z"></path><path fillRule="evenodd" d="M6 1.5a.75.75 0 0 1 .75.75V4h10.5V2.25a.75.75 0 0 1 1.5 0V4H20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1.75V2.25A.75.75 0 0 1 6 1.5Zm14 6H4v10a.5.5 0 0 0 .5.5h15a.5.5 0 0 0 .5-.5V7.5Z" clipRule="evenodd"/></svg>
+                    {milestone.estimated_dates}
+                  </span>
+                ) : null}
+                {milestone.daily_duration ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-[#121212] px-2 py-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.75a.75.75 0 0 1 .75.75v9.19l4.28 2.47a.75.75 0 1 1-.75 1.3l-4.75-2.75A.75.75 0 0 1 11.25 12V2.5A.75.75 0 0 1 12 1.75Z"/><path fillRule="evenodd" d="M12 22.5c5.8 0 10.5-4.7 10.5-10.5S17.8 1.5 12 1.5 1.5 6.2 1.5 12 6.2 22.5 12 22.5Zm0-1.5a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" clipRule="evenodd"/></svg>
+                    {milestone.daily_duration}/hari
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            <button onClick={onClose} className="p-1 transition-colors rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" aria-label="Close modal">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </header>
+          <div className="flex-1 overflow-y-auto p-5">
+            <h3 className="font-semibold text-slate-800 dark:text-neutral-200 text-sm">Subbab</h3>
+            {Array.isArray((milestone as any).subbab) && (milestone as any).subbab.length ? (
+              <ol className="mt-2 space-y-2 text-sm list-decimal list-inside text-slate-700 dark:text-neutral-300">
+                {(milestone as any).subbab.map((title: string, ti: number) => (
+                  <li key={ti} className="leading-relaxed">{title}</li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-2 text-sm text-slate-500 dark:text-neutral-400">Belum ada rincian subbab untuk materi ini.</p>
+            )}
+          </div>
+        </div>
+      </Transition.Child>
+    </div>
+  </Transition>
 );
 
 // --- Komponen Halaman Buat Roadmap Baru ---
@@ -97,11 +116,8 @@ export default function NewRoadmapPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [genActive, setGenActive] = useState(false); // cross-tab gate: sedang generate
   const [error, setError] = useState<string | null>(null);
-  const [mindmapData, setMindmapData] = useState<MindmapData | null>(null);
-  const [explanation, setExplanation] = useState<string | null>(null);
-  const [resources, setResources] = useState<Array<{ title: string; url: string; source: string }> | null>(null);
-  const [isModalLoading, setIsModalLoading] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [nodeSummary, setNodeSummary] = useState<string | null>(null);
   const [promptMode, setPromptMode] = useState<'simple' | 'advanced'>('simple');
   const [topic, setTopic] = useState("");
   const [simpleDetails, setSimpleDetails] = useState("");
@@ -166,34 +182,34 @@ export default function NewRoadmapPage() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const handleNodeClick = async (milestone: Milestone) => {
+  const handleNodeClick = (milestone: Milestone) => {
+    // Open modal showing only the selected node's existing details
     setSelectedMilestone(milestone);
-    setIsModalLoading(true);
-    setMindmapData(null);
-  setExplanation(null);
-  setResources(null);
-    setError(null);
-  const detailsForApi = Array.isArray((milestone as any).subbab) ? (milestone as any).subbab.join('\n- ') : '';
+    // Load concise explanation from cache or API
     try {
-      const [mindmapResponse, explanationResponse, resourcesResponse] = await Promise.all([
-        fetch('/api/generate-mindmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: milestone.topic, details: detailsForApi }), }),
-        fetch('/api/generate-explanation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: milestone.topic, details: detailsForApi }), }),
-        fetch('/api/get-resources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: milestone.topic }) })
-      ]);
-      if (!mindmapResponse.ok || !explanationResponse.ok || !resourcesResponse.ok) throw new Error(`Server error`);
-      const mindmapResult = await mindmapResponse.json();
-      const parsedMindmap = mindmapSchema.safeParse(mindmapResult);
-      if (parsedMindmap.success) setMindmapData(parsedMindmap.data); else console.error("Zod validation error for mindmap:", parsedMindmap.error);
-      const explanationResult = await explanationResponse.json();
-      const parsedExplanation = explanationSchema.safeParse(explanationResult);
-      if (parsedExplanation.success) setExplanation(parsedExplanation.data.explanation); else console.error("Zod validation error for explanation:", parsedExplanation.error);
-      const resourcesResult = await resourcesResponse.json();
-      if (Array.isArray(resourcesResult?.resources)) setResources(resourcesResult.resources);
-    } catch (err: any) {
-      setError(err.message || "Gagal mengambil data detail.");
-    } finally {
-      setIsModalLoading(false);
-    }
+      const keyDetails = Array.isArray((milestone as any).subbab) ? (milestone as any).subbab.join(" | ") : '';
+      const cacheKey = `nodeSummary:${milestone.topic}:${keyDetails}`;
+      const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
+      if (cached) {
+        setNodeSummary(cached);
+      } else {
+        setNodeSummary(null);
+        fetch('/api/generate-explanation-short', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: milestone.topic, details: keyDetails })
+        })
+          .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error('Gagal generate ringkasan'))))
+          .then((j) => {
+            const summary = (j?.explanation || '').toString();
+            if (summary) {
+              setNodeSummary(summary);
+              try { localStorage.setItem(cacheKey, summary); } catch {}
+            }
+          })
+          .catch(() => {});
+      }
+    } catch {}
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -209,11 +225,7 @@ export default function NewRoadmapPage() {
       setChatMessages([]);
       setChatInput('');
       setChatLoading(false);
-      setSelectedMilestone(null);
-      setMindmapData(null);
-      setExplanation(null);
-      setResources(null);
-      setIsModalLoading(false);
+  setSelectedMilestone(null);
       setShowTextView(false);
       setRoadmapTitle('');
       setNewFormOpen(false);
@@ -322,8 +334,8 @@ export default function NewRoadmapPage() {
           fetch(`/api/roadmaps/${saved.id}/classify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
         }
       } catch {}
-  // Redirect langsung ke daftar roadmaps; topik bisa diedit saat publish
-  window.location.href = `/dashboard/roadmaps?created=${saved.id}`;
+  // Redirect langsung ke halaman roadmap untuk menyiapkan materi di dalam halaman
+  window.location.href = `/dashboard/roadmaps/${saved.id}?prepare=1`;
     } catch (err: any) {
       setError(err.message);
   show({ type: 'error', title: 'Gagal Menyimpan', message: err.message || 'Terjadi kesalahan.' });
@@ -364,10 +376,7 @@ export default function NewRoadmapPage() {
     setUseAdvancedContext(false);
     setListKey((k) => k + 1);
     setSelectedMilestone(null);
-    setMindmapData(null);
-    setExplanation(null);
-  setIsModalLoading(false);
-  setResources(null);
+  // clear only selection; no AI/mindmap state to reset anymore
     // Mark as saved to silence unsaved guard
     setIsSaved(true);
     try { show({ type: 'info', title: 'Dibatalkan', message: 'Pembuatan roadmap dibatalkan.' }); } catch {}
@@ -821,7 +830,61 @@ export default function NewRoadmapPage() {
   {/* Topic selection moved to publish flow */}
       </div>
       
-  {selectedMilestone && ( <MindmapModal isLoading={isModalLoading} mindmapData={mindmapData} explanation={explanation} resources={resources} onClose={() => setSelectedMilestone(null)} topic={selectedMilestone.topic} /> )}
+  {selectedMilestone && (
+    <Transition as={Fragment} show={true} appear>
+      <div className="fixed inset-0 z-50 flex items-center justify-center" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+          <div className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm" onClick={() => setSelectedMilestone(null)} />
+        </Transition.Child>
+        <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+          <div className="relative bg-white dark:bg-[#0f0f0f] rounded-2xl shadow-2xl w-[min(92vw,720px)] max-h-[80vh] flex flex-col overflow-hidden">
+            <header className="flex items-center justify-between flex-shrink-0 p-4 border-b border-slate-200 dark:border-[#1f1f1f]">
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold tracking-widest uppercase text-blue-600 truncate">{selectedMilestone.timeframe || 'Tahap'}</div>
+                <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white" id="modal-title">{selectedMilestone.topic}</h2>
+                <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-600 dark:text-neutral-400">
+                  {selectedMilestone.estimated_dates ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-[#121212] px-2 py-1">{selectedMilestone.estimated_dates}</span>
+                  ) : null}
+                  {selectedMilestone.daily_duration ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-[#121212] px-2 py-1">{selectedMilestone.daily_duration}/hari</span>
+                  ) : null}
+                </div>
+              </div>
+              <button onClick={() => setSelectedMilestone(null)} className="p-1 transition-colors rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" aria-label="Close modal">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-5">
+              {/* AI concise summary */}
+              <div className="mb-4">
+                <div className="text-xs font-semibold tracking-wider text-slate-500 mb-1">Ringkasan Singkat</div>
+                {nodeSummary ? (
+                  <p className="text-sm leading-relaxed text-slate-700 dark:text-neutral-300 whitespace-pre-wrap">{nodeSummary}</p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="h-3.5 bg-slate-200/70 rounded w-5/6 animate-pulse"></div>
+                    <div className="h-3.5 bg-slate-200/70 rounded w-full animate-pulse"></div>
+                    <div className="h-3.5 bg-slate-200/70 rounded w-4/6 animate-pulse"></div>
+                  </div>
+                )}
+              </div>
+              <h3 className="font-semibold text-slate-800 dark:text-neutral-200 text-sm">Subbab</h3>
+              {Array.isArray((selectedMilestone as any).subbab) && (selectedMilestone as any).subbab.length ? (
+                <ol className="mt-2 space-y-2 text-sm list-decimal list-inside text-slate-700 dark:text-neutral-300">
+                  {(selectedMilestone as any).subbab.map((title: string, ti: number) => (
+                    <li key={ti} className="leading-relaxed">{title}</li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="mt-2 text-sm text-slate-500 dark:text-neutral-400">Belum ada rincian subbab untuk materi ini.</p>
+              )}
+            </div>
+          </div>
+        </Transition.Child>
+      </div>
+    </Transition>
+  )}
     </div>
     )
   );

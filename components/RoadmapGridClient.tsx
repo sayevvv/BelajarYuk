@@ -7,6 +7,7 @@ type RoadmapItem = {
   id: string;
   title: string;
   updatedAt: string | Date;
+  content?: any;
 };
 
 export default function RoadmapGridClient({ items }: { items: RoadmapItem[] }) {
@@ -30,11 +31,23 @@ export default function RoadmapGridClient({ items }: { items: RoadmapItem[] }) {
   }, []);
 
   const isReady = (id: string) => readyMap[id] || id !== preparingId;
+  const isGenerating = (r: RoadmapItem) => {
+    try {
+      const gen = (r as any)?.content?._generation || {};
+      if (!gen?.inProgress) return false;
+      const started = Date.parse(gen?.startedAt || '');
+      if (!started || Number.isNaN(started)) return true;
+      // consider active if within 45 minutes since start
+      return (Date.now() - started) < 45 * 60 * 1000;
+    } catch {
+      return false;
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {items.map((r) => {
-        const gated = !isReady(r.id);
+  const gated = !isReady(r.id) || isGenerating(r);
         const updated = new Date(r.updatedAt);
         return (
           <div key={r.id} className={`relative bg-slate-50 p-6 rounded-xl border border-slate-200 transition-all dark:bg-slate-900 dark:border-slate-800 ${gated ? 'opacity-80' : 'hover:shadow-md hover:border-blue-300 dark:hover:border-slate-700'}`}>

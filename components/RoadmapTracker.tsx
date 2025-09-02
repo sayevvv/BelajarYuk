@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -10,6 +10,7 @@ import { LayoutList, GitBranch, CheckCircle, ArrowLeft } from 'lucide-react';
 import RatingSummary from '@/components/RatingSummary';
 import TopicChips from '@/components/TopicChips';
 import dynamic from 'next/dynamic';
+import { Transition } from '@headlessui/react';
 const TopicSelector = dynamic(() => import('@/components/TopicSelector'), { ssr: false });
 
 type Roadmap = {
@@ -33,6 +34,15 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const [publishing, setPublishing] = useState(false);
   const [showTopicModal, setShowTopicModal] = useState(false);
   const [view, setView] = useState<'graph' | 'checklist'>('graph');
+  const [selectedMilestone, setSelectedMilestone] = useState<any | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [nodeSummary, setNodeSummary] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const [prepareError, setPrepareError] = useState<string | null>(null);
+  const [preparePartial, setPreparePartial] = useState(false);
+  const [prepareCtrl, setPrepareCtrl] = useState<AbortController | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   // Start-date disabled for saved roadmaps
 
   // Load roadmap + progress
@@ -63,6 +73,38 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
     };
   }, [roadmapId]);
 
+  // Auto-start preparing materials when ?prepare=1 is present
+  useEffect(() => {
+    const prep = searchParams?.get('prepare');
+    if (prep === '1') {
+      // Kick off preparation in the background with inline loader
+      (async () => {
+        setPreparing(true);
+        setPrepareError(null);
+        setPreparePartial(false);
+        try {
+          const res = await fetch(`/api/roadmaps/${roadmapId}/prepare-materials`, { method: 'POST' });
+          if (!res.ok) {
+            let msg = 'Gagal menyiapkan materi';
+            try { const j = await res.json(); msg = j?.error || msg; if (j?.partial) setPreparePartial(true); } catch {}
+            if (res.status === 429) { show({ type: 'info', title: 'Server sibuk', message: msg || 'Server sedang sibuk. Coba lagi sebentar.' }); }
+            if (res.status === 409) { show({ type: 'info', title: 'Sedang ada proses lain', message: msg }); }
+            throw new Error(msg);
+          }
+          // Refresh roadmap to pick up materials
+          const r = await fetch(`/api/roadmaps/${roadmapId}`);
+          if (r.ok) setRoadmap(await r.json());
+        } catch (e: any) {
+          setPrepareError(e.message || 'Gagal menyiapkan materi');
+        } finally {
+          setPreparing(false);
+          setPrepareCtrl(null);
+        }
+      })();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, roadmapId]);
+
   // Restore preferred view per roadmap, default to graph
   useEffect(() => {
     try {
@@ -84,6 +126,38 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   // Support both new 'subbab' and legacy 'sub_tasks'
   const milestones: Array<{ timeframe: string; topic: string; subbab?: string[]; sub_tasks?: Array<string | { task: string; type?: string }> }>
     = useMemo(() => (roadmap?.content?.milestones || []) as any, [roadmap]);
+
+  // Open modal for a milestone with optional index and load cached short summary
+  const openMilestoneModal = (m: any, mi: number | null) => {
+    setSelectedMilestone(m);
+    setSelectedIndex(mi);
+    try {
+      const details = Array.isArray((m as any).subbab)
+        ? (m as any).subbab.join(' | ')
+        : (Array.isArray((m as any).sub_tasks) ? (m as any).sub_tasks.map((t: any) => (typeof t === 'string' ? t : t?.task)).join(' | ') : '');
+      const cacheKey = `nodeSummary:${m.topic}:${details}`;
+      const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
+      if (cached) {
+        setNodeSummary(cached);
+      } else {
+        setNodeSummary(null);
+        fetch('/api/generate-explanation-short', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: m.topic, details })
+        })
+          .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error('Gagal generate ringkasan'))))
+          .then((j) => {
+            const summary = (j?.explanation || '').toString();
+            if (summary) {
+              setNodeSummary(summary);
+              try { localStorage.setItem(cacheKey, summary); } catch {}
+            }
+          })
+          .catch(() => {});
+      }
+    } catch {}
+  };
 
   const doPublish = async (publish: boolean) => {
     try {
@@ -195,9 +269,6 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
               <span className="hidden sm:inline">Checklist</span>
             </button>
           </div>
-          {roadmap.published && roadmap.slug ? (
-            <Link href={`/r/${roadmap.slug}`} className="rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-semibold hover:bg-slate-800" target="_blank">Lihat Publik</Link>
-          ) : null}
           <TopicChips roadmapId={(roadmap as any).id} />
           {(roadmap as any).sourceId ? (
             <RatingSummary
@@ -206,30 +277,122 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             />
           ) : null}
           <Link href={`/dashboard/roadmaps/${roadmap.id}/read`} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700">Mulai Belajar</Link>
-          {!(roadmap as any).sourceId && (
+          <div className="relative">
             <button
               type="button"
-              disabled={publishing || ((progress?.percent ?? 0) < 100 && !(roadmap as any).published)}
-              onClick={() => handlePublish(!(roadmap as any).published)}
-              title={
-                ((progress?.percent ?? 0) < 100 && !(roadmap as any).published)
-                  ? 'Selesaikan semua materi hingga 100% untuk mempublikasikan'
-                  : ((roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan')
-              }
-              className={`rounded-lg px-3 py-2 text-sm font-semibold ${ (roadmap as any).published ? 'bg-slate-200 text-slate-800 hover:bg-slate-300' : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed'}`}
+              className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-slate-200 dark:border-[#2a2a2a] bg-white dark:bg-[#0f0f0f] hover:bg-slate-100"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((v) => !v)}
+              title="Menu"
             >
-              {(roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan'}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 6.75a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM12 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM12 20.25a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>
             </button>
-          )}
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="rounded-lg px-3 py-2 text-sm font-semibold bg-red-600 text-white hover:bg-red-700"
-          >
-            Hapus
-          </button>
+            {menuOpen && (
+              <div className="absolute right-0 mt-2 w-56 rounded-lg border border-slate-200 dark:border-[#2a2a2a] bg-white dark:bg-[#0f0f0f] shadow-lg z-20 p-1">
+                {roadmap.published && roadmap.slug ? (
+                  <Link href={`/r/${roadmap.slug}`} target="_blank" className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]">Lihat Publik</Link>
+                ) : null}
+                {preparing ? (
+                  <button className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" onClick={() => { setMenuOpen(false); try { prepareCtrl?.abort(); } catch {} setPreparing(false); setPrepareCtrl(null); setPrepareError('Dibatalkan.'); }}>Batalkan Generate</button>
+                ) : (
+                  <>
+                    <button className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" onClick={() => { setMenuOpen(false); setConfirmResetOpen(true); }}>Generate Ulang…</button>
+                    {(preparePartial || prepareError) && (
+                      <button
+                        className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
+                        onClick={async () => {
+                          setMenuOpen(false);
+                          setPreparing(true); setPrepareError(null); setPreparePartial(false);
+                          const ctrl = new AbortController();
+                          setPrepareCtrl(ctrl);
+                          try {
+                            const res = await fetch(`/api/roadmaps/${roadmapId}/prepare-materials`, { method: 'POST', signal: ctrl.signal });
+                            if (!res.ok) {
+                              let msg = 'Gagal menyiapkan materi';
+                              try { const j = await res.json(); msg = j?.error || msg; if (j?.partial) setPreparePartial(true); } catch {}
+                              if (res.status === 429) show({ type: 'info', title: 'Server sibuk', message: msg });
+                              if (res.status === 409) show({ type: 'info', title: 'Sedang ada proses lain', message: msg });
+                              throw new Error(msg);
+                            }
+                            const r = await fetch(`/api/roadmaps/${roadmapId}`);
+                            if (r.ok) setRoadmap(await r.json());
+                          } catch (e: any) {
+                            setPrepareError(e.message || 'Gagal menyiapkan materi');
+                          } finally { setPreparing(false); setPrepareCtrl(null); }
+                        }}
+                      >Lanjutkan Generate</button>
+                    )}
+                  </>
+                )}
+        {!(roadmap as any).sourceId ? (
+                  <button
+                    className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
+          disabled={publishing}
+          title={(roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan'}
+                    onClick={() => { setMenuOpen(false); handlePublish(!(roadmap as any).published); }}
+                  >{(roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan'}</button>
+                ) : null}
+                <button className="block w-full text-left px-3 py-2 text-sm rounded-md bg-red-50 text-red-700 hover:bg-red-100 dark:bg-[#1a0f0f] dark:text-red-300" onClick={() => { setMenuOpen(false); handleDelete(); }}>Hapus</button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
+
+      {/* Confirm reset modal */}
+      {confirmResetOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmResetOpen(false)} />
+          <div className="relative bg-white dark:bg-[#0f0f0f] rounded-xl shadow-xl w-[min(520px,92vw)]">
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-[#1f1f1f]">
+              <h3 className="text-base font-semibold">Ulangi Generate Materi?</h3>
+            </div>
+            <div className="p-5 text-sm text-slate-700 dark:text-neutral-300 space-y-3">
+              <p>Tindakan ini akan mengulang pembuatan semua materi untuk roadmap ini.</p>
+              <p className="font-medium text-red-600">Semua progress belajar Anda (penanda selesai dan persentase) akan dihapus.</p>
+              <p>Lanjutkan?</p>
+            </div>
+            <div className="px-5 py-4 border-t border-slate-200 dark:border-[#1f1f1f] flex justify-end gap-2">
+              <button className="px-3 py-1.5 rounded border text-sm" onClick={() => setConfirmResetOpen(false)}>Batal</button>
+              <button
+                className="px-3 py-1.5 rounded bg-red-600 text-white text-sm"
+                onClick={async () => {
+                  setConfirmResetOpen(false);
+                  setPreparing(true); setPrepareError(null); setPreparePartial(false);
+                  const ctrl = new AbortController(); setPrepareCtrl(ctrl);
+                  try {
+                    const res = await fetch(`/api/roadmaps/${roadmapId}/prepare-materials?force=1&reset=1`, { method: 'POST', signal: ctrl.signal });
+                    if (!res.ok) {
+                      let msg = 'Gagal menyiapkan materi';
+                      try { const j = await res.json(); msg = j?.error || msg; if (j?.partial) setPreparePartial(true); } catch {}
+                      if (res.status === 429) show({ type: 'info', title: 'Server sibuk', message: msg });
+                      if (res.status === 409) show({ type: 'info', title: 'Sedang ada proses lain', message: msg });
+                      throw new Error(msg);
+                    }
+                    const r = await fetch(`/api/roadmaps/${roadmapId}`);
+                    if (r.ok) setRoadmap(await r.json());
+                  } catch (e: any) {
+                    setPrepareError(e.message || 'Gagal menyiapkan materi');
+                  } finally { setPreparing(false); setPrepareCtrl(null); }
+                }}
+              >Ya, Hapus Progress & Ulangi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline preparing banner */}
+      {(preparing || prepareError || preparePartial) && (
+        <div className="px-6 py-3 border-b border-slate-200 dark:border-[#1f1f1f] bg-amber-50 dark:bg-[#2a1f00] text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3">
+          <div className="text-sm">
+            {preparing ? 'Menyiapkan materi belajar… Anda bisa mulai meninjau roadmap sambil menunggu.' : (prepareError || (preparePartial ? 'Sebagian materi berhasil dibuat. Anda dapat melanjutkan kapan saja.' : ''))}
+          </div>
+          {preparing ? (
+            <div className="h-1.5 w-32 bg-amber-200 rounded-full overflow-hidden"><div className="h-full w-1/3 bg-amber-600 animate-pulse" /></div>
+          ) : null}
+        </div>
+      )}
 
       {showTopicModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -273,22 +436,23 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             <RoadmapGraph
               data={{ milestones: milestones as any }}
               onNodeClick={(m: any) => {
-                // Keep info toast behavior if needed; navigate via Start button instead
-                const first = Array.isArray((m as any).subbab) && (m as any).subbab.length > 0
-                  ? (m as any).subbab[0]
-                  : (Array.isArray((m as any).sub_tasks) && (m as any).sub_tasks.length > 0
-                    ? (typeof (m as any).sub_tasks[0] === 'string' ? (m as any).sub_tasks[0] : (m as any).sub_tasks[0]?.task)
-                    : undefined);
-                show({ type: 'info', title: m.topic, message: first || m.timeframe });
+                // Try to resolve index by reference, fallback by topic+timeframe
+                let idx = (milestones as any[]).findIndex((x: any) => x === m);
+                if (idx < 0) {
+                  const t = (m as any).topic;
+                  const tf = (m as any).timeframe;
+                  idx = (milestones as any[]).findIndex((x: any) => x?.topic === t && x?.timeframe === tf);
+                }
+                openMilestoneModal(m, idx >= 0 ? idx : null);
               }}
               onStartClick={(mi: number) => {
-                // Mirror checklist behavior: go to first subbab of that milestone
-                router.push(`/dashboard/roadmaps/${(roadmap as any).id}/read?m=${mi}&s=0`);
+                const m = (milestones as any[])[mi];
+                openMilestoneModal(m, mi);
               }}
               onSubbabClick={(mi: number, si: number) => {
                 router.push(`/dashboard/roadmaps/${(roadmap as any).id}/read?m=${mi}&s=${si}`);
               }}
-              startButtonLabel="Mulai Belajar"
+              startButtonLabel="Detail"
               promptMode={'simple'}
               showMiniMap={false}
             />
@@ -300,20 +464,16 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             {milestones.map((m, mi) => (
               <li key={mi} className="rounded-xl border border-slate-200 bg-white dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
                 <div className="px-5 py-4 border-b border-slate-200 dark:border-[#1f1f1f] flex items-center justify-between">
-                  <div>
+                  <button type="button" onClick={() => openMilestoneModal(m, mi)} className="text-left">
                     <div className="text-xs font-semibold tracking-widest uppercase text-blue-600">{m.timeframe || `Tahap ${mi + 1}`}</div>
                     <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-neutral-100">{m.topic}</h3>
-                  </div>
-                  {(() => {
-                    const prevQuizKey = `quiz-m-${mi - 1}`;
-                    const prevPassed = mi === 0 ? true : !!(progress?.completedTasks as any)?.[prevQuizKey]?.passed;
-                    const href = `/dashboard/roadmaps/${(roadmap as any).id}/read?m=${mi}&s=0`;
-                    return prevPassed ? (
-                      <Link href={href} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700">Mulai Belajar</Link>
-                    ) : (
-                      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-200 text-slate-500 text-xs font-semibold cursor-not-allowed" title="Selesaikan kuis tahap sebelumnya untuk membuka materi ini">Mulai Belajar</span>
-                    );
-                  })()}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openMilestoneModal(m, mi)}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
+                    title="Lihat Detail Milestone"
+                  >Detail</button>
                 </div>
                 {(Array.isArray((m as any).subbab) && (m as any).subbab.length) || (Array.isArray((m as any).sub_tasks) && (m as any).sub_tasks.length) ? (
                   <ul className="divide-y divide-slate-200 dark:divide-[#1f1f1f]">
@@ -357,6 +517,98 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             ))}
           </ol>
         </div>
+      )}
+      {/* Node Detail Modal for saved roadmaps */}
+  {selectedMilestone && (
+        <Transition as={Fragment} show={true} appear>
+          <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
+            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
+              <div className="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-sm" onClick={() => { setSelectedMilestone(null); setSelectedIndex(null); }} />
+            </Transition.Child>
+            <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
+              <div className="relative bg-white dark:bg-[#0f0f0f] rounded-2xl shadow-2xl w-[min(92vw,720px)] max-h-[80vh] flex flex-col overflow-hidden">
+                <header className="flex items-center justify-between flex-shrink-0 p-4 border-b border-slate-200 dark:border-[#1f1f1f]">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-semibold tracking-widest uppercase text-blue-600">{selectedMilestone.timeframe || 'Tahap'}</div>
+                    <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">{selectedMilestone.topic}</h2>
+                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-600 dark:text-neutral-400">
+                      {selectedMilestone.estimated_dates ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-[#121212] px-2 py-1">{selectedMilestone.estimated_dates}</span>
+                      ) : null}
+                      {selectedMilestone.daily_duration ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-[#121212] px-2 py-1">{selectedMilestone.daily_duration}/hari</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <button onClick={() => { setSelectedMilestone(null); setSelectedIndex(null); }} className="p-1 transition-colors rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" aria-label="Tutup modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </header>
+                <div className="flex-1 overflow-y-auto p-5">
+                  <div className="mb-4">
+                    <div className="text-xs font-semibold tracking-wider text-slate-500 mb-1">Ringkasan Singkat</div>
+                    {nodeSummary ? (
+                      <p className="text-sm leading-relaxed text-slate-700 dark:text-neutral-300 whitespace-pre-wrap">{nodeSummary}</p>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="h-3.5 bg-slate-200/70 rounded w-5/6 animate-pulse"></div>
+                        <div className="h-3.5 bg-slate-200/70 rounded w-full animate-pulse"></div>
+                        <div className="h-3.5 bg-slate-200/70 rounded w-4/6 animate-pulse"></div>
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-slate-800 dark:text-neutral-200 text-sm">Subbab</h3>
+                  {Array.isArray((selectedMilestone as any).subbab) && (selectedMilestone as any).subbab.length ? (
+                    <ol className="mt-2 space-y-2 text-sm list-decimal list-inside text-slate-700 dark:text-neutral-300">
+                      {(selectedMilestone as any).subbab.map((title: string, ti: number) => (
+                        <li key={ti} className="leading-relaxed">{title}</li>
+                      ))}
+                    </ol>
+                  ) : Array.isArray((selectedMilestone as any).sub_tasks) && (selectedMilestone as any).sub_tasks.length ? (
+                    <ol className="mt-2 space-y-2 text-sm list-decimal list-inside text-slate-700 dark:text-neutral-300">
+                      {(selectedMilestone as any).sub_tasks.map((task: any, ti: number) => (
+                        <li key={ti} className="leading-relaxed">{typeof task === 'string' ? task : task?.task}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-500 dark:text-neutral-400">Belum ada rincian subbab untuk materi ini.</p>
+                  )}
+                </div>
+                {/* Footer with conditional Start Learning button */}
+                {(() => {
+                  try {
+                    const content: any = roadmap?.content || {};
+                    const expectedLen = Array.isArray((selectedMilestone as any).subbab)
+                      ? (selectedMilestone as any).subbab.length
+                      : (Array.isArray((selectedMilestone as any).sub_tasks) ? (selectedMilestone as any).sub_tasks.length : 0);
+                    const byMilestone: any[][] = Array.isArray(content?.materialsByMilestone) ? content.materialsByMilestone : [];
+                    const mIdx = typeof selectedIndex === 'number' ? selectedIndex : -1;
+                    const mats = mIdx >= 0 ? (byMilestone[mIdx] || []) : [];
+                    const complete = expectedLen > 0 && mats.length >= expectedLen;
+                    return (
+                      <div className="flex items-center justify-end gap-2 p-3 border-t border-slate-200 dark:border-[#1f1f1f]">
+                        {complete ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700"
+                            onClick={() => {
+                              const idx = typeof selectedIndex === 'number' ? selectedIndex : 0;
+                              router.push(`/dashboard/roadmaps/${(roadmap as any).id}/read?m=${idx}&s=0`);
+                            }}
+                          >Mulai Belajar</button>
+                        ) : (
+                          <span className="text-xs text-slate-500">Materi belum lengkap untuk milestone ini.</span>
+                        )}
+                      </div>
+                    );
+                  } catch {
+                    return null;
+                  }
+                })()}
+              </div>
+            </Transition.Child>
+          </div>
+        </Transition>
       )}
     </div>
   );
