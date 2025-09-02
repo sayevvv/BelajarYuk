@@ -29,6 +29,34 @@ export function isSameOrigin(req: Request, allowedOrigins: string[] = []): boole
   return allowedOrigins.some((o) => origin.toLowerCase().startsWith(o.toLowerCase()));
 }
 
+// Build a simple allowlist based on env and request host; supports dev and prod
+export function getAllowedOrigins(req: Request): string[] {
+  const url = new URL(req.url);
+  const hostHeader = req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host;
+  const proto = (req.headers.get('x-forwarded-proto') || url.protocol.replace(':','')) as 'http' | 'https';
+  const hostOrigin = `${proto}://${hostHeader}`.toLowerCase();
+  const list = new Set<string>([
+    hostOrigin,
+    'http://localhost:3000',
+    'https://localhost:3000',
+  ]);
+  const appHost = process.env.APP_HOSTNAME; // e.g., myapp.com or myapp.vercel.app
+  if (appHost) {
+    list.add(`https://${appHost.toLowerCase()}`);
+    list.add(`http://${appHost.toLowerCase()}`);
+  }
+  return Array.from(list);
+}
+
+export function assertSameOrigin(req: Request, extraAllowed: string[] = []) {
+  const allowed = [...getAllowedOrigins(req), ...extraAllowed];
+  if (!isSameOrigin(req, allowed)) {
+    const err = new Error('Invalid origin');
+    (err as any).status = 403;
+    throw err;
+  }
+}
+
 // Very simple in-memory rate limiter (best-effort, per instance)
 type BucketKey = string;
 const rateBuckets = new Map<BucketKey, { count: number; resetAt: number }>();

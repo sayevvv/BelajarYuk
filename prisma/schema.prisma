@@ -47,7 +47,7 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  passwordHash  String?   // For email/password login (hashed with argon2)
+  passwordHash  String? // For email/password login (hashed with argon2)
   accounts      Account[]
   sessions      Session[]
   roadmaps      Roadmap[] // Relasi ke Roadmap
@@ -67,23 +67,23 @@ model Roadmap {
   title     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Menyimpan seluruh output AI sebagai JSON
-  content   Json
+  content     Json
   contentHash String?
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Publikasi
   published   Boolean   @default(false)
   slug        String?   @unique
   publishedAt DateTime?
 
-  progress    RoadmapProgress?
+  progress RoadmapProgress?
 
   // Jika roadmap ini hasil fork dari roadmap lain, simpan id sumbernya
-  sourceId   String?
+  sourceId String?
 
   @@unique([userId, sourceId])
   @@index([userId, contentHash, title])
@@ -98,4 +98,96 @@ model RoadmapProgress {
   percent        Float    @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+// Community ratings (1..5) with optional short review
+model RoadmapRating {
+  id        String   @id @default(cuid())
+  roadmapId String
+  versionId String?
+  userId    String
+  stars     Int
+  review    String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roadmapId, versionId, userId])
+  @@index([roadmapId, versionId])
+  @@index([userId])
+}
+
+// Denormalized aggregates for fast display
+model RoadmapAggregates {
+  roadmapId     String   @id
+  versionId     String?
+  avgStars      Float    @default(0)
+  ratingsCount  Int      @default(0)
+  h1            Int      @default(0)
+  h2            Int      @default(0)
+  h3            Int      @default(0)
+  h4            Int      @default(0)
+  h5            Int      @default(0)
+  savesCount    Int      @default(0)
+  forksCount    Int      @default(0)
+  wilsonScore   Float    @default(0)
+  bayesianScore Float    @default(0)
+  updatedAt     DateTime @updatedAt
+}
+
+// Unique saves per user (treat as intent to download)
+model RoadmapSave {
+  id        String   @id @default(cuid())
+  roadmapId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([roadmapId, userId])
+  @@index([roadmapId])
+  @@index([userId])
+}
+
+// Optional daily metrics for trends
+model RoadmapMetricsDaily {
+  id            String   @id @default(cuid())
+  roadmapId     String
+  date          DateTime
+  views         Int      @default(0)
+  uniqueViewers Int      @default(0)
+  saves         Int      @default(0)
+  uniqueSavers  Int      @default(0)
+  forks         Int      @default(0)
+
+  @@unique([roadmapId, date])
+  @@index([roadmapId])
+}
+
+// High-level controlled taxonomy of topics
+model Topic {
+  id           String         @id @default(cuid())
+  slug         String         @unique
+  name         String
+  parentId     String?
+  aliases      String[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  RoadmapTopic RoadmapTopic[]
+
+  @@index([parentId])
+}
+
+// Assigned topics for a roadmap (multi-label, one primary recommended)
+model RoadmapTopic {
+  id         String   @id @default(cuid())
+  roadmapId  String
+  versionId  String?
+  topicId    String
+  topic      Topic    @relation(fields: [topicId], references: [id])
+  confidence Float    @default(0)
+  isPrimary  Boolean  @default(false)
+  source     String   @default("ai") // ai|author|admin
+  createdAt  DateTime @default(now())
+
+  @@unique([roadmapId, versionId, topicId])
+  @@index([roadmapId])
+  @@index([topicId])
 }

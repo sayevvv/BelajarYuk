@@ -4,6 +4,7 @@ import { authOptions } from '@/auth.config';
 import { prisma } from '@/lib/prisma';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { PromptTemplate } from '@langchain/core/prompts';
+import { assertSameOrigin } from '@/lib/security';
 
 export async function GET(req: NextRequest, ctx: any) {
   const { id } = await (ctx as any).params;
@@ -24,7 +25,9 @@ export async function GET(req: NextRequest, ctx: any) {
   // Build context strictly from generated materials of this milestone's subbab
   const contextParts: string[] = materials.map((it, idx) => {
     const pts = Array.isArray(it.points) && it.points.length ? `\nPoin:\n- ${it.points.join('\n- ')}` : '';
-    return `Subbab ${idx + 1}: ${it.title}\nBody:\n${(it.body || '').toString().slice(0, 2000)}${pts}`; // limit body per subbab to keep prompt size reasonable
+    const title = String(it.title || '').slice(0, 120);
+    const body = String(it.body || '').slice(0, 2000);
+    return `Subbab ${idx + 1}: ${title}\nBody:\n${body}${pts}`; // limit sizes to keep prompt bounded
   });
   const context = contextParts.join('\n\n---\n\n');
 
@@ -48,8 +51,8 @@ Konteks Materi:
   const p = await prompt.format({ context });
   try {
     const res = await model.invoke([{ role: 'user', content: p }] as any);
-    let raw: string = (res as any)?.content?.[0]?.text || (res as any)?.content || '';
-    let text = String(raw).trim();
+  const raw: string = (res as any)?.content?.[0]?.text || (res as any)?.content || '';
+  let text = String(raw).trim();
     // strip markdown fences if present
     if (text.startsWith('```')) {
       const first = text.indexOf('\n');
@@ -80,14 +83,17 @@ export async function POST(req: NextRequest, ctx: any) {
   const { id } = await (ctx as any).params;
   const session = (await getServerSession(authOptions as any)) as any;
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try { assertSameOrigin(req as any); } catch (e: any) { return NextResponse.json({ error: 'Forbidden' }, { status: e?.status || 403 }); }
   const body = await req.json();
   const { milestoneIndex, score, passed } = body as { milestoneIndex: number; score: number; passed: boolean };
 
   const roadmap = await (prisma as any).roadmap.findFirst({ where: { id, userId: session.user.id }, include: { progress: true } });
   if (!roadmap) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  const key = `quiz-m-${milestoneIndex}`;
+  const safeMi = Math.max(0, Math.min(999, Number(milestoneIndex) || 0));
+  const safeScore = Math.max(0, Math.min(100, Number(score) || 0));
+  const key = `quiz-m-${safeMi}`;
   const map = (roadmap as any).progress?.completedTasks || {};
-  map[key] = { passed: !!passed, score: Number(score) };
+  map[key] = { passed: !!passed, score: safeScore };
 
   const updated = await (prisma as any).roadmapProgress.upsert({
     where: { roadmapId: id },

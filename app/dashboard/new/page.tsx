@@ -95,6 +95,7 @@ export default function NewRoadmapPage() {
   const { show } = useToast();
   const [roadmapData, setRoadmapData] = useState<RoadmapData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [genActive, setGenActive] = useState(false); // cross-tab gate: sedang generate
   const [error, setError] = useState<string | null>(null);
   const [mindmapData, setMindmapData] = useState<MindmapData | null>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -129,6 +130,42 @@ export default function NewRoadmapPage() {
 
   const isSessionLoading = status === "loading";
 
+  // Cross-tab generation gate helpers
+  const GEN_TTL_MS = 10 * 60 * 1000; // 10 minutes TTL to clear stale locks
+  const getGenKey = () => `gen:roadmap:${(session as any)?.user?.id || 'anon'}`;
+  const refreshGenActive = () => {
+    try {
+      const key = getGenKey();
+      const val = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+      if (!val) { setGenActive(false); return; }
+      const ts = Number(val);
+      if (Number.isFinite(ts)) {
+        const age = Date.now() - ts;
+        if (age > GEN_TTL_MS) {
+          localStorage.removeItem(key);
+          setGenActive(false);
+        } else {
+          setGenActive(true);
+        }
+      } else {
+        // unexpected value; clear
+        localStorage.removeItem(key);
+        setGenActive(false);
+      }
+    } catch { setGenActive(false); }
+  };
+
+  useEffect(() => { refreshGenActive(); }, [status]);
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key) return;
+      const key = getGenKey();
+      if (e.key === key) refreshGenActive();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const handleNodeClick = async (milestone: Milestone) => {
     setSelectedMilestone(milestone);
     setIsModalLoading(true);
@@ -161,6 +198,11 @@ export default function NewRoadmapPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Gate: if a generation is already running for this user, block and notify
+    if (genActive) {
+      show({ type: 'info', title: 'Sedang generate', message: 'Sedang membuat roadmap, mohon menunggu hingga selesai.' });
+      return;
+    }
     // If replacing an existing roadmap, run cancel-like reset but without confirmation; show warning toast
     if (roadmapData) {
       try { show({ type: 'info', title: 'Mengganti Roadmap', message: 'Roadmap sebelumnya dibuang. Membuat yang baru…' }); } catch {}
@@ -177,6 +219,8 @@ export default function NewRoadmapPage() {
       setNewFormOpen(false);
     }
     setIsLoading(true);
+  // Mark local generation lock
+  try { localStorage.setItem(getGenKey(), String(Date.now())); } catch {}
     setError(null);
     setRoadmapData(null);
   setIsSaved(false);
@@ -241,6 +285,8 @@ export default function NewRoadmapPage() {
       setError(err.message);
     } finally {
       setIsLoading(false);
+  // Clear generation lock (best-effort)
+  try { localStorage.removeItem(getGenKey()); setGenActive(false); } catch {}
     }
   };
 
@@ -259,10 +305,24 @@ export default function NewRoadmapPage() {
       setSaving(true);
   const response = await fetch('/api/roadmaps/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: roadmapTitle || activeTopic, content: roadmapData, }), });
       if (!response.ok) throw new Error("Gagal menyimpan roadmap.");
-      const saved = await response.json();
+  const saved = await response.json();
       show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan!' });
       setIsSaved(true);
-  // Redirect ke daftar "Roadmap Saya" dan jalankan persiapan materi di background
+      // Klasifikasi topik di background
+      try {
+        const payload = {
+          title: roadmapTitle || activeTopic || 'Roadmap',
+          summary: '',
+          milestones: Array.isArray(roadmapData?.milestones) ? roadmapData!.milestones.map(m => m.topic) : [],
+        };
+        if (navigator.sendBeacon) {
+          const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+          navigator.sendBeacon(`/api/roadmaps/${saved.id}/classify`, blob);
+        } else {
+          fetch(`/api/roadmaps/${saved.id}/classify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
+        }
+      } catch {}
+  // Redirect langsung ke daftar roadmaps; topik bisa diedit saat publish
   window.location.href = `/dashboard/roadmaps?created=${saved.id}`;
     } catch (err: any) {
       setError(err.message);
@@ -353,7 +413,7 @@ export default function NewRoadmapPage() {
   // no explicit startNewRoadmap; use icon toggle to open the initial form
 
   // Unsaved changes guard: beforeunload + internal navigation interception
-  const hasUnsaved = !isSaved && !!(
+  const hasUnsaved = !isSaved && !saving && !!(
     // inputs typed or options changed
     simpleDetails.trim() || topic.trim() || finalGoal.trim() || startDate || endDate ||
     promptMode === 'advanced' || availableDays !== 'all' || dailyDuration !== 2 ||
@@ -365,6 +425,73 @@ export default function NewRoadmapPage() {
   useEffect(() => {
     currentUrlRef.current = window.location.href;
   }, []);
+
+  // Prefill form from URL params (support simple/advanced coming from HomeStartBox)
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const mode = sp.get('mode');
+      if (mode === 'advanced') {
+        setPromptMode('advanced');
+        const t = sp.get('topic') || '';
+        if (t) setTopic(t);
+        const lvl = sp.get('level');
+        if (lvl) {
+          // Map 'expert' (from HomeStartBox) to internal 'pro'
+          const mapped = lvl === 'expert' ? 'pro' : (lvl === 'beginner' || lvl === 'intermediate' ? lvl : 'beginner');
+          setUserLevel(mapped as 'beginner' | 'intermediate' | 'pro');
+        }
+        const g = sp.get('goal') || '';
+        if (g) setFinalGoal(g);
+        // Time settings
+        const enableTime = sp.get('enableTime');
+        if (enableTime === '1') {
+          setEnableTimeOptions(true);
+          const ad = sp.get('availableDays');
+          if (ad === 'all' || ad === 'weekdays' || ad === 'weekends') setAvailableDays(ad);
+          const dd = sp.get('dailyDuration');
+          if (dd && !Number.isNaN(Number(dd))) setDailyDuration(Number(dd));
+          const sd = sp.get('startDate');
+          if (sd) setStartDate(sd);
+          const ed = sp.get('endDate');
+          if (ed) setEndDate(ed);
+        }
+      } else if (mode === 'simple') {
+        const q = sp.get('q') || '';
+        if (q) {
+          setPromptMode('simple');
+          setSimpleDetails(q);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Auto-start generation when navigated from Home with params filled
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const mode = sp.get('mode');
+    if (mode === 'simple' && simpleDetails.trim()) {
+      // Slight defer to ensure state is applied
+      const t = setTimeout(() => {
+        // Avoid duplicate submits
+        if (!isLoading && !roadmapData) {
+          const evt = new Event('submit');
+          // Manually call handleSubmit instead of dispatching form event
+          handleSubmit({ preventDefault: () => {} } as any);
+        }
+      }, 0);
+      return () => clearTimeout(t);
+    }
+    if (mode === 'advanced' && (topic.trim() || finalGoal.trim())) {
+      const t = setTimeout(() => {
+        if (!isLoading && !roadmapData) {
+          handleSubmit({ preventDefault: () => {} } as any);
+        }
+      }, 0);
+      return () => clearTimeout(t);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simpleDetails, topic, finalGoal, enableTimeOptions, availableDays, dailyDuration, startDate, endDate]);
 
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -388,7 +515,7 @@ export default function NewRoadmapPage() {
       const url = new URL(href, window.location.origin);
       const same = url.pathname === window.location.pathname && url.search === window.location.search && url.hash === window.location.hash;
       if (same) return;
-      const ok = window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
+  const ok = saving ? true : window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
       if (!ok) {
         e.preventDefault();
         e.stopPropagation();
@@ -399,7 +526,7 @@ export default function NewRoadmapPage() {
     // Handle browser back/forward
   const onPopState = () => {
       if (!hasUnsaved) return;
-      const ok = window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
+      const ok = saving ? true : window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
       if (!ok) {
         // revert to current URL
         history.pushState(null, '', currentUrlRef.current);
@@ -478,29 +605,35 @@ export default function NewRoadmapPage() {
                 </button>
               ) : null}
             </header>
+            {genActive && (
+              <div className="mt-4 p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 dark:bg-[#0b1a24] dark:border-[#0e2635] dark:text-sky-300 flex items-center gap-2">
+                <span className="h-4 w-4 inline-block rounded-full border-2 border-blue-600 border-t-transparent animate-spin" aria-hidden />
+                <span>Sedang membuat roadmap, mohon menunggu…</span>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
               {/* Pilih mode prompt */}
               <div className="flex p-1 mb-6 bg-slate-100 rounded-lg">
-                <button type="button" onClick={() => setPromptMode('simple')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'simple' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Simple</button>
-                <button type="button" onClick={() => setPromptMode('advanced')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'advanced' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Advanced</button>
+                <button type="button" disabled={genActive} onClick={() => setPromptMode('simple')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'simple' ? 'bg-white shadow text-blue-600' : 'text-slate-500'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Simple</button>
+                <button type="button" disabled={genActive} onClick={() => setPromptMode('advanced')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'advanced' ? 'bg-white shadow text-blue-600' : 'text-slate-500'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Advanced</button>
               </div>
               <div className="mt-4 flex-grow overflow-y-auto pr-2">
                 {promptMode === 'simple' ? (
                   <div>
                     <label htmlFor="prompt" className="block text-sm font-medium text-slate-700 mb-1.5">Apa yang ingin kamu pelajari?</label>
-                    <textarea id="prompt" value={simpleDetails} onChange={(e) => setSimpleDetails(e.target.value)} required placeholder="Contoh: Belajar Next.js dari nol untuk bikin portfolio. Waktu luang 1-2 jam per hari." className="w-full h-28 px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+                    <textarea id="prompt" disabled={genActive} value={simpleDetails} onChange={(e) => setSimpleDetails(e.target.value)} required placeholder="Contoh: Belajar Next.js dari nol untuk bikin portfolio. Waktu luang 1-2 jam per hari." className="w-full h-28 px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"/>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {/* 1. Topik Utama */}
                     <div>
                       <label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1.5">Topik Utama</label>
-                      <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required/>
+                      <input id="topic" disabled={genActive} type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500" required/>
                     </div>
                     {/* 2. Level Pengguna */}
                     <div>
                       <label htmlFor="userLevel" className="block text-sm font-medium text-slate-700 mb-1.5">Level Pengguna</label>
-                      <select
+                      <select disabled={genActive}
                         id="userLevel"
                         value={userLevel}
                         onChange={(e) => setUserLevel(e.target.value as any)}
@@ -514,41 +647,47 @@ export default function NewRoadmapPage() {
                     {/* 3. Tujuan Akhir */}
                     <div>
                       <label htmlFor="goal" className="block text-sm font-medium text-slate-700 mb-1.5">Tujuan Akhir <span className="text-slate-400">(Opsional)</span></label>
-                      <input id="goal" type="text" value={finalGoal} onChange={(e) => setFinalGoal(e.target.value)} placeholder="Contoh: Lulus ujian sertifikasi" className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                      <input id="goal" disabled={genActive} type="text" value={finalGoal} onChange={(e) => setFinalGoal(e.target.value)} placeholder="Contoh: Lulus ujian sertifikasi" className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"/>
                     </div>
                     {/* 4. Pengaturan Waktu (toggle) */}
                     <div className="pt-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-slate-700">Pengaturan Waktu</span>
-                        <button type="button" onClick={() => setEnableTimeOptions(v=>!v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enableTimeOptions ? 'bg-blue-600' : 'bg-slate-300'}`} aria-pressed={enableTimeOptions} aria-label="Toggle waktu">
-                          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${enableTimeOptions ? 'translate-x-5' : 'translate-x-1'}`} />
-                        </button>
+                        <label className="inline-flex items-center gap-2">
+                          <input disabled={genActive}
+                            type="checkbox"
+                            checked={enableTimeOptions}
+                            onChange={(e) => setEnableTimeOptions(e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300"
+                          />
+                          <span className="text-sm text-slate-700">Aktif</span>
+                        </label>
                       </div>
                       {enableTimeOptions && (
                         <div className="mt-3 space-y-4">
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Hari Tersedia</label>
                             <div className="grid grid-cols-3 gap-2 text-xs text-center">
-                              <button type="button" onClick={() => setAvailableDays('all')} className={`p-2 border rounded-md ${availableDays === 'all' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Semua</button>
-                              <button type="button" onClick={() => setAvailableDays('weekdays')} className={`p-2 border rounded-md ${availableDays === 'weekdays' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Kerja</button>
-                              <button type="button" onClick={() => setAvailableDays('weekends')} className={`p-2 border rounded-md ${availableDays === 'weekends' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Akhir Pekan</button>
+                              <button type="button" disabled={genActive} onClick={() => setAvailableDays('all')} className={`p-2 border rounded-md ${availableDays === 'all' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Semua</button>
+                              <button type="button" disabled={genActive} onClick={() => setAvailableDays('weekdays')} className={`p-2 border rounded-md ${availableDays === 'weekdays' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Kerja</button>
+                              <button type="button" disabled={genActive} onClick={() => setAvailableDays('weekends')} className={`p-2 border rounded-md ${availableDays === 'weekends' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Akhir Pekan</button>
                             </div>
                           </div>
                           <div>
                             <label htmlFor="duration" className="block text-sm font-medium text-slate-700 mb-1.5">Durasi Belajar per Hari</label>
                             <div className="flex items-center gap-2">
-                              <input id="duration" type="range" min="1" max="8" value={dailyDuration} onChange={(e) => setDailyDuration(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"/>
+                              <input id="duration" disabled={genActive} type="range" min="1" max="8" value={dailyDuration} onChange={(e) => setDailyDuration(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer disabled:opacity-60"/>
                               <span className="text-sm font-semibold text-slate-600 w-16 text-right">{dailyDuration} jam</span>
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Mulai <span className="text-slate-400">(Opsional)</span></label>
-                              <input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                              <input id="startDate" disabled={genActive} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"/>
                             </div>
                             <div>
                               <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Selesai <span className="text-slate-400">(Opsional)</span></label>
-                              <input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                              <input id="endDate" disabled={genActive} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"/>
                             </div>
                           </div>
                         </div>
@@ -558,7 +697,7 @@ export default function NewRoadmapPage() {
                 )}
               </div>
               <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-black pt-6 pb-2">
-                <button type="submit" disabled={isLoading} className="w-full px-4 py-3 font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed">{isLoading ? 'Membuat Roadmap...' : 'Buat Roadmap'}</button>
+                <button type="submit" disabled={isLoading || genActive} className="w-full px-4 py-3 font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed">{(isLoading || genActive) ? 'Membuat Roadmap...' : 'Buat Roadmap'}</button>
               </div>
             </form>
             {error && (<div className="p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg"><strong>Oops!</strong> {error}</div>)}
@@ -679,6 +818,7 @@ export default function NewRoadmapPage() {
             <RoadmapPlaceholder isLoading={isLoading} />
           )}
         </div>
+  {/* Topic selection moved to publish flow */}
       </div>
       
   {selectedMilestone && ( <MindmapModal isLoading={isModalLoading} mindmapData={mindmapData} explanation={explanation} resources={resources} onClose={() => setSelectedMilestone(null)} topic={selectedMilestone.topic} /> )}

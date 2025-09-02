@@ -36,6 +36,10 @@ export default function RootLayout({
             __html: `(() => { try { const saved = localStorage.getItem('theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; const enableDark = saved ? saved === 'dark' : prefersDark; const el = document.documentElement; if (enableDark) el.classList.add('dark'); else el.classList.remove('dark'); } catch {} })();`,
           }}
         />
+  <link rel="preconnect" href="https://picsum.photos" crossOrigin="" />
+  <link rel="dns-prefetch" href="https://picsum.photos" />
+  <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="" />
+  <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
       {/* Terapkan variabel font ke tag body */}
   <body className={`${spaceGrotesk.variable} ${crimsonPro.variable} font-sans antialiased bg-white text-slate-900 dark:bg-black dark:text-neutral-200`}>

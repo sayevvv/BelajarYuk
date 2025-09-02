@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth.config";
 import { PrismaClient } from "@prisma/client";
+import { assertSameOrigin } from "@/lib/security";
 
 const prisma = new PrismaClient();
 
@@ -37,6 +38,9 @@ export async function POST(req: NextRequest, ctx: any) {
   const { id } = await (ctx as any).params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try { assertSameOrigin(req as any); } catch (e: any) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: e?.status || 403 });
+  }
   const body = await req.json();
   const { milestoneIndex, taskIndex, done } = body as { milestoneIndex: number; taskIndex: number; done: boolean };
 

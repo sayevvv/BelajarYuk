@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { PlusSquare, History, Settings as SettingsIcon, Search, User as UserIcon, ChevronLeft, ChevronRight, Home as HomeIcon } from 'lucide-react';
+import { PlusSquare, ListChecks, Settings as SettingsIcon, Search, User as UserIcon, ChevronLeft, ChevronRight, Home as HomeIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import ThemeToggle from './ui/ThemeToggle';
@@ -84,7 +84,7 @@ export default function DashboardSidebar() {
         <SidebarLink expanded={expanded} href="/dashboard/new" icon={PlusSquare} label="Buat Roadmap" />
         <SidebarLink expanded={expanded} href="/dashboard/browse" icon={Search} label="Jelajahi" />
         {session && (
-          <SidebarLink expanded={expanded} href="/dashboard/roadmaps" icon={History} label="Roadmap Saya" />
+          <SidebarLink expanded={expanded} href="/dashboard/roadmaps" icon={ListChecks} label="Roadmap Saya" />
         )}
       </nav>
   <nav className={`mt-auto flex flex-col ${expanded ? 'items-stretch' : 'items-center'} gap-2 w-full`}>
