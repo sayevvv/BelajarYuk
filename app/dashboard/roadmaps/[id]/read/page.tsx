@@ -221,8 +221,10 @@ export default async function ReadMaterialPage(props: any) {
   <ReaderScrollReset deps={[m, s]} behavior="smooth" />
   {/* Suppress noisy errors from browser extensions like QuillBot */}
   <ThirdPartyNoiseGuard />
-  {/* Encourage community rating on the source roadmap if this is a fork of a published one */}
-  <PostStudyRatePrompt sourceRoadmapId={(roadmap as any).sourceId || (roadmap as any).id} sourceSlug={(roadmap as any).slug} />
+  {/* Encourage rating only when this roadmap comes from a public source (hide for self-generated) */}
+  { (roadmap as any).sourceId ? (
+    <PostStudyRatePrompt sourceRoadmapId={(roadmap as any).sourceId} sourceSlug={(roadmap as any).slug} />
+  ) : null }
     </div>
   );
 }

@@ -27,12 +27,6 @@ export async function POST(req: NextRequest, ctx: any) {
   if (!roadmap) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (publish) {
-    // Enforce: user can only publish if progress is 100%
-    const progress = await (prisma as any).roadmapProgress.findUnique({ where: { roadmapId: roadmap.id } });
-    const percent = typeof progress?.percent === 'number' ? progress.percent : 0;
-    if (percent < 100) {
-      return NextResponse.json({ error: "Progress harus 100% untuk mempublikasikan", percent }, { status: 400 });
-    }
     if ((roadmap as any).sourceId) {
       return NextResponse.json({ error: "Forked roadmap cannot be published" }, { status: 400 });
     }

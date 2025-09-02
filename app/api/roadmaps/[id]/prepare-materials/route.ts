@@ -13,6 +13,10 @@ export async function POST(_req: NextRequest, ctx: any) {
   const session = (await getServerSession(authOptions as any)) as any;
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const url = new URL(_req.url);
+  const force = url.searchParams.get('force') === '1';
+  const reset = url.searchParams.get('reset') === '1';
+
   // Fetch roadmap owned by the user
   const roadmap = await (prisma as any).roadmap.findFirst({ where: { id, userId: session.user.id } });
   if (!roadmap) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -21,8 +25,23 @@ export async function POST(_req: NextRequest, ctx: any) {
   const milestones: any[] = Array.isArray(content?.milestones) ? content.milestones : [];
   if (milestones.length === 0) return NextResponse.json({ error: "No milestones" }, { status: 400 });
 
-  // If already prepared in new format, return
-  if (Array.isArray((content as any).materialsByMilestone)) {
+  // Gate: only one generation per user at a time (stale after 45 minutes)
+  const others = await (prisma as any).roadmap.findMany({ where: { userId: session.user.id }, select: { id: true, content: true } });
+  const now = Date.now();
+  const hasActiveOther = others.some((r: any) => {
+    if (String(r.id) === String(id)) return false;
+    const gen = (r?.content as any)?._generation || {};
+    if (!gen?.inProgress) return false;
+    const startedAt = gen?.startedAt ? Date.parse(gen.startedAt) : 0;
+    // consider stale if older than 45 minutes
+    return startedAt && (now - startedAt) < 45 * 60 * 1000;
+  });
+  if (hasActiveOther) {
+    return NextResponse.json({ error: 'Terdapat proses generate materi lain yang masih berjalan. Selesaikan atau tunggu hingga selesai sebelum memulai yang baru.' }, { status: 409 });
+  }
+
+  // If already prepared in new format, return unless forcing regeneration
+  if (!force && Array.isArray((content as any).materialsByMilestone)) {
     return NextResponse.json({ ok: true, alreadyPrepared: true });
   }
 
@@ -54,27 +73,72 @@ Instruksi:
     inputVariables: ["topic", "subbab"],
   });
 
-  const materialsByMilestone: any[][] = [];
-  for (let i = 0; i < milestones.length; i++) {
-    const m = milestones[i];
-    const list: string[] = Array.isArray(m.subbab) ? m.subbab : Array.isArray(m.sub_tasks) ? (m.sub_tasks as any[]).map((t) => (typeof t === 'string' ? t : t?.task)).filter(Boolean) : [];
-    const items: any[] = [];
-    for (let j = 0; j < list.length; j++) {
-      const sub = list[j];
-      const details = `- ${sub}`;
-      const p = await prompt.format({ topic: `${m.topic} — ${sub}`, subbab: details });
-      const res = await model.invoke([{ role: 'user', content: p }] as any);
-  let text = (res as any)?.content?.[0]?.text || (res as any)?.content || '';
-  text = String(text).slice(0, 5000); // cap body length per subbab
-      const hero = `https://source.unsplash.com/1200x500/?${encodeURIComponent(sub)}`;
-  const safeTitle = String(sub || '').slice(0, 200);
-  items.push({ milestoneIndex: i, subIndex: j, title: safeTitle, body: String(text || '').trim(), points: [], heroImage: hero });
+  // Optionally clear progress and materials when resetting
+  try {
+    if (reset) {
+      try {
+        await (prisma as any).roadmapProgress.upsert({
+          where: { roadmapId: id },
+          update: { completedTasks: {}, percent: 0 },
+          create: { roadmapId: id, completedTasks: {}, percent: 0 },
+        });
+      } catch {}
     }
-    materialsByMilestone.push(items);
+    const base = reset ? { ...(content || {}), materialsByMilestone: [] } : (content || {});
+    const mark = { ...base, _generation: { inProgress: true, startedAt: new Date().toISOString() } };
+    await (prisma as any).roadmap.update({ where: { id: (roadmap as any).id }, data: { content: mark } });
+  } catch {}
+
+  const materialsByMilestone: any[][] = [];
+  try {
+    for (let i = 0; i < milestones.length; i++) {
+      const m = milestones[i];
+      const list: string[] = Array.isArray(m.subbab)
+        ? m.subbab
+        : Array.isArray(m.sub_tasks)
+          ? (m.sub_tasks as any[]).map((t) => (typeof t === 'string' ? t : t?.task)).filter(Boolean)
+          : [];
+      const items: any[] = [];
+      for (let j = 0; j < list.length; j++) {
+        const sub = list[j];
+        const details = `- ${sub}`;
+        const p = await prompt.format({ topic: `${m.topic} — ${sub}`, subbab: details });
+        try {
+          const res = await model.invoke([{ role: 'user', content: p }] as any);
+          let text = (res as any)?.content?.[0]?.text || (res as any)?.content || '';
+          text = String(text).slice(0, 5000); // cap body length per subbab
+          const hero = `https://source.unsplash.com/1200x500/?${encodeURIComponent(sub)}`;
+          const safeTitle = String(sub || '').slice(0, 200);
+          items.push({ milestoneIndex: i, subIndex: j, title: safeTitle, body: String(text || '').trim(), points: [], heroImage: hero });
+        } catch (e: any) {
+          // Persist what we have so far and return a busy error
+          materialsByMilestone.push(items);
+          const partialContent = { ...(content || {}), materialsByMilestone };
+          await (prisma as any).roadmap.update({ where: { id: roadmap.id }, data: { content: { ...partialContent, _generation: { inProgress: false, finishedAt: new Date().toISOString() } } } });
+          const msg = String(e?.message || 'Gagal membuat materi');
+          const is429 = e?.status === 429 || /rate|quota|exhaust/i.test(msg) || /429/.test(msg);
+          return NextResponse.json(
+            { ok: false, partial: true, error: is429 ? 'Server sedang sibuk. Coba lagi sebentar.' : 'Terjadi kesalahan saat membuat materi.', count: materialsByMilestone.reduce((a, b) => a + b.length, 0) },
+            { status: is429 ? 429 : 503 }
+          );
+        }
+      }
+      materialsByMilestone.push(items);
+    }
+  } catch (e: any) {
+    const msg = String(e?.message || 'Gagal menyiapkan materi');
+    const is429 = e?.status === 429 || /rate|quota|exhaust/i.test(msg) || /429/.test(msg);
+    const partialContent = { ...(content || {}), materialsByMilestone };
+    // Save partial progress if any
+    try { await (prisma as any).roadmap.update({ where: { id: roadmap.id }, data: { content: { ...partialContent, _generation: { inProgress: false, finishedAt: new Date().toISOString() } } } }); } catch {}
+    return NextResponse.json(
+      { ok: false, partial: true, error: is429 ? 'Server sedang sibuk. Coba lagi sebentar.' : 'Terjadi kesalahan saat menyiapkan materi.', count: materialsByMilestone.reduce((a, b) => a + b.length, 0) },
+      { status: is429 ? 429 : 503 }
+    );
   }
 
   // Save back into content.materials
-  const newContent = { ...(content || {}), materialsByMilestone };
+  const newContent = { ...(content || {}), materialsByMilestone, _generation: { inProgress: false, finishedAt: new Date().toISOString() } };
   await (prisma as any).roadmap.update({ where: { id: roadmap.id }, data: { content: newContent } });
 
   return NextResponse.json({ ok: true, count: materialsByMilestone.reduce((a, b) => a + b.length, 0) });
