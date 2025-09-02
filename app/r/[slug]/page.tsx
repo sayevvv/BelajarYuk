@@ -45,8 +45,10 @@ export default async function PublicRoadmapPage(props: any) {
           </div>
           <div className="mt-1 flex items-center gap-4">
             <TopicChips roadmapId={(roadmap as any).id} />
-            <RatingSummary roadmapId={(roadmap as any).id} canRate={(roadmap as any).user?.id !== (session as any)?.user?.id} />
-            <SaveRoadmapButton roadmapId={(roadmap as any).id} />
+            <RatingSummary roadmapId={(roadmap as any).id} canRate={(roadmap as any).published && (roadmap as any).user?.id !== (session as any)?.user?.id} />
+            {(roadmap as any).published && (roadmap as any).user?.id !== (session as any)?.user?.id ? (
+              <SaveRoadmapButton roadmapId={(roadmap as any).id} />
+            ) : null}
           </div>
         </div>
       </header>

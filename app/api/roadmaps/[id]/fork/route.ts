@@ -11,6 +11,7 @@ export async function POST(_req: NextRequest, ctx: any) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Only allow forking published roadmaps not owned by the user
   const source = await (prisma as any).roadmap.findFirst({ where: { id, published: true } });
   if (!source) return NextResponse.json({ error: "Source not found or not published" }, { status: 404 });
   if (source.userId === session.user.id) return NextResponse.json({ error: "Cannot save your own roadmap" }, { status: 400 });

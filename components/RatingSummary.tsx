@@ -50,6 +50,7 @@ export default function RatingSummary({ roadmapId, canRate }: { roadmapId: strin
         </div>
         <span className="text-sm text-slate-600">{avg.toFixed(1)} ({count})</span>
       </div>
+      {/* Show saves/forks only for public roadmaps (server GET returns 0 for non-public) */}
       <div className="flex items-center gap-3 text-sm text-slate-600">
         <span title="Disimpan">💾 {saves}</span>
         <span title="Fork">🍴 {forks}</span>

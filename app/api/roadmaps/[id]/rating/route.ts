@@ -28,11 +28,14 @@ export async function GET(_req: NextRequest, ctx: any) {
   const { id } = await (ctx as any).params;
   const session = await getServerSession(authOptions as any);
   const userId = (session as any)?.user?.id as string | undefined;
+  // Only expose aggregates for published roadmaps
+  const rp = await (prisma as any).roadmap.findUnique({ where: { id } });
+  if (!rp || !(rp as any).published) return NextResponse.json({ aggregate: { avg: 0, count: 0, histogram: [0,0,0,0,0], saves: 0, forks: 0 }, myRating: null });
 
   const agg = await (prisma as any).roadmapAggregates.findUnique({ where: { roadmapId: id } });
   let my = null;
-  if (userId) {
-  my = await (prisma as any).roadmapRating.findFirst({ where: { roadmapId: id, userId } });
+  if (userId && (rp as any).userId !== userId) {
+    my = await (prisma as any).roadmapRating.findFirst({ where: { roadmapId: id, userId } });
   }
   return NextResponse.json({
     aggregate: {

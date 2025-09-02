@@ -11,6 +11,11 @@ export async function POST(req: NextRequest, ctx: any) {
   if (!(session as any)?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userId = (session as any).user.id as string;
 
+  // Ensure the roadmap is public and not owned by the same user
+  const src = await (prisma as any).roadmap.findUnique({ where: { id } });
+  if (!src || !(src as any).published) return NextResponse.json({ error: 'Roadmap tidak tersedia untuk disimpan' }, { status: 403 });
+  if ((src as any).userId === userId) return NextResponse.json({ error: 'Tidak bisa menyimpan roadmap milik sendiri' }, { status: 400 });
+
   await prisma.$transaction(async (tx) => {
     const t: any = tx as any;
     await t.roadmapSave.upsert({ where: { roadmapId_userId: { roadmapId: id, userId } }, update: {}, create: { roadmapId: id, userId } });

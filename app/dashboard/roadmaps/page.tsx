@@ -4,8 +4,9 @@ import { authOptions } from '@/auth.config';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import RoadmapGridClient from '@/components/RoadmapGridClient';
+import RoadmapSortSelect from '@/components/RoadmapSortSelect';
 
-export default async function RoadmapIndexPage() {
+export default async function RoadmapIndexPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   const session = (await getServerSession(authOptions as any)) as any;
   if (!session?.user?.id) {
     return (
@@ -17,12 +18,39 @@ export default async function RoadmapIndexPage() {
     );
   }
 
-  const items = await prisma.roadmap.findMany({ where: { userId: session.user.id }, orderBy: { updatedAt: 'desc' } });
+  const sort = (typeof searchParams?.sort === 'string' ? searchParams?.sort : 'updated_desc') as string;
+  const orderBy: any = (() => {
+    switch (sort) {
+      case 'updated_asc':
+        return { updatedAt: 'asc' };
+      case 'created_desc':
+        return { createdAt: 'desc' };
+      case 'created_asc':
+        return { createdAt: 'asc' };
+      case 'title_asc':
+        return { title: 'asc' };
+      case 'title_desc':
+        return { title: 'desc' };
+      case 'access_desc':
+        return [{ progress: { updatedAt: 'desc' } }, { updatedAt: 'desc' }];
+      case 'access_asc':
+        return [{ progress: { updatedAt: 'asc' } }, { updatedAt: 'asc' }];
+      default:
+        return { updatedAt: 'desc' };
+    }
+  })();
+
+  const items = await prisma.roadmap.findMany({ where: { userId: session.user.id }, orderBy });
+  const own = items.filter((i: any) => !i.sourceId);
+  const saved = items.filter((i: any) => !!i.sourceId);
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-black">
       <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Roadmap Saya</h1>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Roadmap Saya</h1>
+          <RoadmapSortSelect current={typeof searchParams?.sort === 'string' ? (searchParams?.sort as string) : 'updated_desc'} />
+        </div>
       </header>
   <div className="p-8">
         {items.length === 0 ? (
@@ -32,7 +60,26 @@ export default async function RoadmapIndexPage() {
             <Link href="/dashboard/new" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200">Buat Rencana Baru</Link>
           </div>
         ) : (
-          <RoadmapGridClient items={items as any} />
+          <div className="space-y-10">
+            {own.length > 0 && (
+              <section>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Dibuat oleh Saya</h2>
+                  <div className="text-sm text-slate-500">{own.length} item</div>
+                </div>
+                <RoadmapGridClient items={own as any} />
+              </section>
+            )}
+            {saved.length > 0 && (
+              <section>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Disimpan dari Luar</h2>
+                  <div className="text-sm text-slate-500">{saved.length} item</div>
+                </div>
+                <RoadmapGridClient items={saved as any} />
+              </section>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -95,6 +95,7 @@ export default function NewRoadmapPage() {
   const { show } = useToast();
   const [roadmapData, setRoadmapData] = useState<RoadmapData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [genActive, setGenActive] = useState(false); // cross-tab gate: sedang generate
   const [error, setError] = useState<string | null>(null);
   const [mindmapData, setMindmapData] = useState<MindmapData | null>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -129,6 +130,42 @@ export default function NewRoadmapPage() {
 
   const isSessionLoading = status === "loading";
 
+  // Cross-tab generation gate helpers
+  const GEN_TTL_MS = 10 * 60 * 1000; // 10 minutes TTL to clear stale locks
+  const getGenKey = () => `gen:roadmap:${(session as any)?.user?.id || 'anon'}`;
+  const refreshGenActive = () => {
+    try {
+      const key = getGenKey();
+      const val = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+      if (!val) { setGenActive(false); return; }
+      const ts = Number(val);
+      if (Number.isFinite(ts)) {
+        const age = Date.now() - ts;
+        if (age > GEN_TTL_MS) {
+          localStorage.removeItem(key);
+          setGenActive(false);
+        } else {
+          setGenActive(true);
+        }
+      } else {
+        // unexpected value; clear
+        localStorage.removeItem(key);
+        setGenActive(false);
+      }
+    } catch { setGenActive(false); }
+  };
+
+  useEffect(() => { refreshGenActive(); }, [status]);
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key) return;
+      const key = getGenKey();
+      if (e.key === key) refreshGenActive();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const handleNodeClick = async (milestone: Milestone) => {
     setSelectedMilestone(milestone);
     setIsModalLoading(true);
@@ -161,6 +198,11 @@ export default function NewRoadmapPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Gate: if a generation is already running for this user, block and notify
+    if (genActive) {
+      show({ type: 'info', title: 'Sedang generate', message: 'Sedang membuat roadmap, mohon menunggu hingga selesai.' });
+      return;
+    }
     // If replacing an existing roadmap, run cancel-like reset but without confirmation; show warning toast
     if (roadmapData) {
       try { show({ type: 'info', title: 'Mengganti Roadmap', message: 'Roadmap sebelumnya dibuang. Membuat yang baru…' }); } catch {}
@@ -177,6 +219,8 @@ export default function NewRoadmapPage() {
       setNewFormOpen(false);
     }
     setIsLoading(true);
+  // Mark local generation lock
+  try { localStorage.setItem(getGenKey(), String(Date.now())); } catch {}
     setError(null);
     setRoadmapData(null);
   setIsSaved(false);
@@ -241,6 +285,8 @@ export default function NewRoadmapPage() {
       setError(err.message);
     } finally {
       setIsLoading(false);
+  // Clear generation lock (best-effort)
+  try { localStorage.removeItem(getGenKey()); setGenActive(false); } catch {}
     }
   };
 
@@ -559,29 +605,35 @@ export default function NewRoadmapPage() {
                 </button>
               ) : null}
             </header>
+            {genActive && (
+              <div className="mt-4 p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 dark:bg-[#0b1a24] dark:border-[#0e2635] dark:text-sky-300 flex items-center gap-2">
+                <span className="h-4 w-4 inline-block rounded-full border-2 border-blue-600 border-t-transparent animate-spin" aria-hidden />
+                <span>Sedang membuat roadmap, mohon menunggu…</span>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
               {/* Pilih mode prompt */}
               <div className="flex p-1 mb-6 bg-slate-100 rounded-lg">
-                <button type="button" onClick={() => setPromptMode('simple')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'simple' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Simple</button>
-                <button type="button" onClick={() => setPromptMode('advanced')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'advanced' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Advanced</button>
+                <button type="button" disabled={genActive} onClick={() => setPromptMode('simple')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'simple' ? 'bg-white shadow text-blue-600' : 'text-slate-500'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Simple</button>
+                <button type="button" disabled={genActive} onClick={() => setPromptMode('advanced')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'advanced' ? 'bg-white shadow text-blue-600' : 'text-slate-500'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Advanced</button>
               </div>
               <div className="mt-4 flex-grow overflow-y-auto pr-2">
                 {promptMode === 'simple' ? (
                   <div>
                     <label htmlFor="prompt" className="block text-sm font-medium text-slate-700 mb-1.5">Apa yang ingin kamu pelajari?</label>
-                    <textarea id="prompt" value={simpleDetails} onChange={(e) => setSimpleDetails(e.target.value)} required placeholder="Contoh: Belajar Next.js dari nol untuk bikin portfolio. Waktu luang 1-2 jam per hari." className="w-full h-28 px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"/>
+                    <textarea id="prompt" disabled={genActive} value={simpleDetails} onChange={(e) => setSimpleDetails(e.target.value)} required placeholder="Contoh: Belajar Next.js dari nol untuk bikin portfolio. Waktu luang 1-2 jam per hari." className="w-full h-28 px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"/>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {/* 1. Topik Utama */}
                     <div>
                       <label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1.5">Topik Utama</label>
-                      <input id="topic" type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required/>
+                      <input id="topic" disabled={genActive} type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Contoh: Belajar Next.js dari Dasar" className="w-full px-3 py-2 transition-colors border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500" required/>
                     </div>
                     {/* 2. Level Pengguna */}
                     <div>
                       <label htmlFor="userLevel" className="block text-sm font-medium text-slate-700 mb-1.5">Level Pengguna</label>
-                      <select
+                      <select disabled={genActive}
                         id="userLevel"
                         value={userLevel}
                         onChange={(e) => setUserLevel(e.target.value as any)}
@@ -595,14 +647,14 @@ export default function NewRoadmapPage() {
                     {/* 3. Tujuan Akhir */}
                     <div>
                       <label htmlFor="goal" className="block text-sm font-medium text-slate-700 mb-1.5">Tujuan Akhir <span className="text-slate-400">(Opsional)</span></label>
-                      <input id="goal" type="text" value={finalGoal} onChange={(e) => setFinalGoal(e.target.value)} placeholder="Contoh: Lulus ujian sertifikasi" className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                      <input id="goal" disabled={genActive} type="text" value={finalGoal} onChange={(e) => setFinalGoal(e.target.value)} placeholder="Contoh: Lulus ujian sertifikasi" className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"/>
                     </div>
                     {/* 4. Pengaturan Waktu (toggle) */}
                     <div className="pt-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-slate-700">Pengaturan Waktu</span>
                         <label className="inline-flex items-center gap-2">
-                          <input
+                          <input disabled={genActive}
                             type="checkbox"
                             checked={enableTimeOptions}
                             onChange={(e) => setEnableTimeOptions(e.target.checked)}
@@ -616,26 +668,26 @@ export default function NewRoadmapPage() {
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Hari Tersedia</label>
                             <div className="grid grid-cols-3 gap-2 text-xs text-center">
-                              <button type="button" onClick={() => setAvailableDays('all')} className={`p-2 border rounded-md ${availableDays === 'all' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Semua</button>
-                              <button type="button" onClick={() => setAvailableDays('weekdays')} className={`p-2 border rounded-md ${availableDays === 'weekdays' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Kerja</button>
-                              <button type="button" onClick={() => setAvailableDays('weekends')} className={`p-2 border rounded-md ${availableDays === 'weekends' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'}`}>Akhir Pekan</button>
+                              <button type="button" disabled={genActive} onClick={() => setAvailableDays('all')} className={`p-2 border rounded-md ${availableDays === 'all' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Semua</button>
+                              <button type="button" disabled={genActive} onClick={() => setAvailableDays('weekdays')} className={`p-2 border rounded-md ${availableDays === 'weekdays' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Kerja</button>
+                              <button type="button" disabled={genActive} onClick={() => setAvailableDays('weekends')} className={`p-2 border rounded-md ${availableDays === 'weekends' ? 'bg-blue-100 border-blue-500 text-blue-700 font-semibold' : 'border-slate-300'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Akhir Pekan</button>
                             </div>
                           </div>
                           <div>
                             <label htmlFor="duration" className="block text-sm font-medium text-slate-700 mb-1.5">Durasi Belajar per Hari</label>
                             <div className="flex items-center gap-2">
-                              <input id="duration" type="range" min="1" max="8" value={dailyDuration} onChange={(e) => setDailyDuration(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"/>
+                              <input id="duration" disabled={genActive} type="range" min="1" max="8" value={dailyDuration} onChange={(e) => setDailyDuration(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer disabled:opacity-60"/>
                               <span className="text-sm font-semibold text-slate-600 w-16 text-right">{dailyDuration} jam</span>
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label htmlFor="startDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Mulai <span className="text-slate-400">(Opsional)</span></label>
-                              <input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                              <input id="startDate" disabled={genActive} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"/>
                             </div>
                             <div>
                               <label htmlFor="endDate" className="block text-sm font-medium text-slate-700 mb-1.5">Tgl Selesai <span className="text-slate-400">(Opsional)</span></label>
-                              <input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                              <input id="endDate" disabled={genActive} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-sm border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"/>
                             </div>
                           </div>
                         </div>
@@ -645,7 +697,7 @@ export default function NewRoadmapPage() {
                 )}
               </div>
               <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-black pt-6 pb-2">
-                <button type="submit" disabled={isLoading} className="w-full px-4 py-3 font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed">{isLoading ? 'Membuat Roadmap...' : 'Buat Roadmap'}</button>
+                <button type="submit" disabled={isLoading || genActive} className="w-full px-4 py-3 font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed">{(isLoading || genActive) ? 'Membuat Roadmap...' : 'Buat Roadmap'}</button>
               </div>
             </form>
             {error && (<div className="p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg"><strong>Oops!</strong> {error}</div>)}

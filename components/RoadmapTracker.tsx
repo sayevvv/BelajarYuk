@@ -123,7 +123,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
       const res = await fetch(`/api/roadmaps/${roadmapId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Gagal menghapus roadmap');
       show({ type: 'success', title: 'Dihapus', message: 'Roadmap berhasil dihapus.' });
-      router.push('/dashboard/history');
+  router.push('/dashboard/roadmaps');
     } catch (e: any) {
       setError(e.message || 'Gagal menghapus roadmap');
       show({ type: 'error', title: 'Gagal', message: e.message || 'Gagal menghapus roadmap' });
@@ -144,12 +144,12 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const backHref = (() => {
     const from = (searchParams?.get('from') || '').toLowerCase();
     if (from === 'browse') return '/dashboard/browse';
-    if (from === 'history') return '/dashboard/history';
+  if (from === 'history') return '/dashboard/roadmaps';
     if (from === 'roadmaps' || from === 'mine' || from === 'my') return '/dashboard/roadmaps';
     try {
       const ref = document?.referrer || '';
       if (/\/dashboard\/browse/.test(ref)) return '/dashboard/browse';
-      if (/\/dashboard\/history/.test(ref)) return '/dashboard/history';
+  if (/\/dashboard\/history/.test(ref)) return '/dashboard/roadmaps';
     } catch {}
     return '/dashboard/roadmaps';
   })();
@@ -199,13 +199,12 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             <Link href={`/r/${roadmap.slug}`} className="rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-semibold hover:bg-slate-800" target="_blank">Lihat Publik</Link>
           ) : null}
           <TopicChips roadmapId={(roadmap as any).id} />
-          <RatingSummary
-            roadmapId={(roadmap as any).sourceId || (roadmap as any).id}
-            canRate={
-              !!(roadmap as any).sourceId
-              || (!!(roadmap as any).published && !!(roadmap as any).slug && (roadmap as any).user?.id !== (session as any)?.user?.id)
-            }
-          />
+          {(roadmap as any).sourceId ? (
+            <RatingSummary
+              roadmapId={(roadmap as any).sourceId}
+              canRate={true}
+            />
+          ) : null}
           <Link href={`/dashboard/roadmaps/${roadmap.id}/read`} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700">Mulai Belajar</Link>
           {!(roadmap as any).sourceId && (
             <button

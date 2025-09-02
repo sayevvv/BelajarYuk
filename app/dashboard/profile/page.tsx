@@ -228,7 +228,7 @@ export default function ProfilePage() {
         <section className="mt-6 bg-white border border-slate-200 rounded-2xl p-6">
           <h2 className="text-lg font-semibold text-slate-900">Tautan Cepat</h2>
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <Link href="/dashboard/history" className="rounded-md border border-slate-300 px-3 py-2 hover:bg-slate-50">Riwayat</Link>
+            <Link href="/dashboard/roadmaps" className="rounded-md border border-slate-300 px-3 py-2 hover:bg-slate-50">Roadmap Saya</Link>
             <Link href="/dashboard/browse" className="rounded-md border border-slate-300 px-3 py-2 hover:bg-slate-50">Jelajah</Link>
             <Link href="/dashboard/new" className="rounded-md border border-slate-300 px-3 py-2 hover:bg-slate-50">Buat Roadmap</Link>
           </div>
