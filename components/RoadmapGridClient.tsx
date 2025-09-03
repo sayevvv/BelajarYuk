@@ -50,7 +50,7 @@ export default function RoadmapGridClient({ items }: { items: RoadmapItem[] }) {
   const gated = !isReady(r.id) || isGenerating(r);
         const updated = new Date(r.updatedAt);
         return (
-          <div key={r.id} className={`relative bg-slate-50 p-6 rounded-xl border border-slate-200 transition-all dark:bg-slate-900 dark:border-slate-800 ${gated ? 'opacity-80' : 'hover:shadow-md hover:border-blue-300 dark:hover:border-slate-700'}`}>
+          <div key={r.id} className={`relative bg-slate-50 p-6 rounded-xl border border-slate-200 transition-all dark:bg-slate-900 dark:border-slate-800 hover:shadow-md hover:border-blue-300 dark:hover:border-slate-700`}>
             <div className="flex items-start justify-between gap-3">
               <h3 className="font-bold text-slate-800 text-lg truncate dark:text-slate-100">{r.title}</h3>
               {gated ? (
@@ -58,11 +58,7 @@ export default function RoadmapGridClient({ items }: { items: RoadmapItem[] }) {
               ) : null}
             </div>
             <div className="text-sm text-slate-500 mt-2 dark:text-slate-400">Diperbarui {updated.toLocaleString('id-ID')}</div>
-            {gated ? (
-              <div className="mt-4 text-xs text-slate-500">Roadmap akan bisa dibuka setelah materi selesai disiapkan.</div>
-            ) : (
-              <Link href={`/dashboard/roadmaps/${r.id}?from=roadmaps`} className="mt-4 inline-block rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200">Buka</Link>
-            )}
+            <Link href={`/dashboard/roadmaps/${r.id}?from=roadmaps`} className="mt-4 inline-block rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200">Buka</Link>
           </div>
         );
       })}

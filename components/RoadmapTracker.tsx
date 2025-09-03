@@ -43,6 +43,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const [prepareCtrl, setPrepareCtrl] = useState<AbortController | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [confirmUnpublishOpen, setConfirmUnpublishOpen] = useState(false);
   // Start-date disabled for saved roadmaps
 
   // Load roadmap + progress
@@ -127,6 +128,35 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const milestones: Array<{ timeframe: string; topic: string; subbab?: string[]; sub_tasks?: Array<string | { task: string; type?: string }> }>
     = useMemo(() => (roadmap?.content?.milestones || []) as any, [roadmap]);
 
+  // Determine if materials are ready for publishing (client-side hint; server enforces again)
+  const materialsReady = useMemo(() => {
+    try {
+      const content: any = (roadmap as any)?.content || {};
+      if (content?._generation?.inProgress) return false;
+      const mats: any[][] = Array.isArray(content?.materialsByMilestone) ? content.materialsByMilestone : [];
+      const ms = Array.isArray((roadmap as any)?.content?.milestones) ? (roadmap as any).content.milestones : [];
+      if (!ms.length) return false;
+      for (let i = 0; i < ms.length; i++) {
+        const m: any = ms[i] || {};
+        const expected = Array.isArray(m.subbab) ? m.subbab.length : (Array.isArray(m.sub_tasks) ? m.sub_tasks.length : 0);
+        if (expected > 0) {
+          const got = Array.isArray(mats[i]) ? mats[i].length : 0;
+          if (got < expected) return false;
+        }
+      }
+      return true;
+    } catch { return false; }
+  }, [roadmap]);
+
+  const hasAnyMaterials = useMemo(() => {
+    try {
+      const mats: any[][] = Array.isArray((roadmap as any)?.content?.materialsByMilestone)
+        ? (roadmap as any).content.materialsByMilestone
+        : [];
+      return mats.some((mi) => Array.isArray(mi) && mi.length > 0);
+    } catch { return false; }
+  }, [roadmap]);
+
   // Open modal for a milestone with optional index and load cached short summary
   const openMilestoneModal = (m: any, mi: number | null) => {
     setSelectedMilestone(m);
@@ -188,7 +218,8 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
       setShowTopicModal(true);
       return;
     }
-    return doPublish(false);
+    // Confirm before unpublishing
+    setConfirmUnpublishOpen(true);
   };
 
   const handleDelete = async () => {
@@ -245,6 +276,20 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
           <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-wider text-slate-500">Rencana Belajar</div>
             <h1 className="text-2xl font-bold text-slate-900 truncate">{roadmap.title}</h1>
+            {Boolean((roadmap as any).sourceId) && (
+              <div className="mt-1 flex items-center gap-2">
+                {(roadmap as any).source?.user?.name ? (
+                  <span className="inline-flex items-center rounded-md bg-slate-100 text-slate-700 px-2 py-0.5 text-[11px]" title={`Sumber: ${(roadmap as any).source?.user?.name}`}>
+                    oleh {(roadmap as any).source?.user?.name}
+                  </span>
+                ) : null}
+                {((roadmap as any).source?.published === false) && (
+                  <span className="inline-flex items-center rounded-md bg-amber-50 text-amber-800 px-2 py-0.5 text-[11px] font-medium" title="Sumber tidak lagi publik">
+                    Sumber tidak lagi publik
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
   <div className="flex items-center gap-3">
@@ -276,7 +321,33 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
               canRate={true}
             />
           ) : null}
-          <Link href={`/dashboard/roadmaps/${roadmap.id}/read`} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700">Mulai Belajar</Link>
+          {(!materialsReady && !(roadmap as any).published && !(roadmap as any).sourceId) ? (
+            <button
+              type="button"
+              onClick={async () => {
+                setMenuOpen(false);
+                setPreparing(true); setPrepareError(null); setPreparePartial(false);
+                const ctrl = new AbortController(); setPrepareCtrl(ctrl);
+                try {
+                  const res = await fetch(`/api/roadmaps/${roadmapId}/prepare-materials`, { method: 'POST', signal: ctrl.signal });
+                  if (!res.ok) {
+                    let msg = 'Gagal menyiapkan materi';
+                    try { const j = await res.json(); msg = j?.error || msg; if (j?.partial) setPreparePartial(true); } catch {}
+                    if (res.status === 429) show({ type: 'info', title: 'Server sibuk', message: msg });
+                    if (res.status === 409) show({ type: 'info', title: 'Sedang ada proses lain', message: msg });
+                    throw new Error(msg);
+                  }
+                  const r = await fetch(`/api/roadmaps/${roadmapId}`);
+                  if (r.ok) setRoadmap(await r.json());
+                } catch (e: any) {
+                  setPrepareError(e.message || 'Gagal menyiapkan materi');
+                } finally { setPreparing(false); setPrepareCtrl(null); }
+              }}
+              className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700"
+            >Generate Materi</button>
+          ) : (
+            <Link href={`/dashboard/roadmaps/${roadmap.id}/read`} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700">Mulai Belajar</Link>
+          )}
           <div className="relative">
             <button
               type="button"
@@ -288,7 +359,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M12 6.75a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM12 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM12 20.25a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>
             </button>
-            {menuOpen && (
+                {menuOpen && (
               <div className="absolute right-0 mt-2 w-56 rounded-lg border border-slate-200 dark:border-[#2a2a2a] bg-white dark:bg-[#0f0f0f] shadow-lg z-20 p-1">
                 {roadmap.published && roadmap.slug ? (
                   <Link href={`/r/${roadmap.slug}`} target="_blank" className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]">Lihat Publik</Link>
@@ -297,7 +368,35 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                   <button className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" onClick={() => { setMenuOpen(false); try { prepareCtrl?.abort(); } catch {} setPreparing(false); setPrepareCtrl(null); setPrepareError('Dibatalkan.'); }}>Batalkan Generate</button>
                 ) : (
                   <>
-                    <button className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" onClick={() => { setMenuOpen(false); setConfirmResetOpen(true); }}>Generate Ulang…</button>
+                    {/* Initial generate when materials are not ready */}
+                    {!materialsReady && !(roadmap as any).published && !(roadmap as any).sourceId && (
+                      <button
+                        className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
+                        onClick={async () => {
+                          setMenuOpen(false);
+                          setPreparing(true); setPrepareError(null); setPreparePartial(false);
+                          const ctrl = new AbortController(); setPrepareCtrl(ctrl);
+                          try {
+                            const res = await fetch(`/api/roadmaps/${roadmapId}/prepare-materials`, { method: 'POST', signal: ctrl.signal });
+                            if (!res.ok) {
+                              let msg = 'Gagal menyiapkan materi';
+                              try { const j = await res.json(); msg = j?.error || msg; if (j?.partial) setPreparePartial(true); } catch {}
+                              if (res.status === 429) show({ type: 'info', title: 'Server sibuk', message: msg });
+                              if (res.status === 409) show({ type: 'info', title: 'Sedang ada proses lain', message: msg });
+                              throw new Error(msg);
+                            }
+                            const r = await fetch(`/api/roadmaps/${roadmapId}`);
+                            if (r.ok) setRoadmap(await r.json());
+                          } catch (e: any) {
+                            setPrepareError(e.message || 'Gagal menyiapkan materi');
+                          } finally { setPreparing(false); setPrepareCtrl(null); }
+                        }}
+                      >Generate Materi</button>
+                    )}
+                    {/* Regenerate option shown when there are any materials */}
+                    {hasAnyMaterials && !(roadmap as any).published && !(roadmap as any).sourceId && (
+                      <button className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" onClick={() => { setMenuOpen(false); setConfirmResetOpen(true); }}>Generate Ulang…</button>
+                    )}
                     {(preparePartial || prepareError) && (
                       <button
                         className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
@@ -325,11 +424,15 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                     )}
                   </>
                 )}
-        {!(roadmap as any).sourceId ? (
+                {!(roadmap as any).sourceId ? (
                   <button
                     className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
-          disabled={publishing}
-          title={(roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan'}
+                    disabled={publishing || (!(roadmap as any).published && !materialsReady)}
+                    title={
+                      (roadmap as any).published
+                        ? 'Batalkan Publikasi'
+                        : (!materialsReady ? 'Generate materi belajar terlebih dahulu sebelum mempublikasikan' : 'Publikasikan')
+                    }
                     onClick={() => { setMenuOpen(false); handlePublish(!(roadmap as any).published); }}
                   >{(roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan'}</button>
                 ) : null}
@@ -377,6 +480,32 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                   } finally { setPreparing(false); setPrepareCtrl(null); }
                 }}
               >Ya, Hapus Progress & Ulangi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm unpublish modal */}
+      {confirmUnpublishOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmUnpublishOpen(false)} />
+          <div className="relative bg-white dark:bg-[#0f0f0f] rounded-xl shadow-xl w-[min(520px,92vw)]">
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-[#1f1f1f]">
+              <h3 className="text-base font-semibold">Batalkan Publikasi?</h3>
+            </div>
+            <div className="p-5 text-sm text-slate-700 dark:text-neutral-300 space-y-3">
+              <p>Roadmap akan disembunyikan dari halaman publik dan tidak bisa disimpan atau dinilai oleh orang lain.</p>
+              <p>Anda dapat mempublikasikannya kembali kapan saja.</p>
+            </div>
+            <div className="px-5 py-4 border-t border-slate-200 dark:border-[#1f1f1f] flex justify-end gap-2">
+              <button className="px-3 py-1.5 rounded border text-sm" onClick={() => setConfirmUnpublishOpen(false)}>Batal</button>
+              <button
+                className="px-3 py-1.5 rounded bg-amber-600 text-white text-sm"
+                onClick={async () => {
+                  setConfirmUnpublishOpen(false);
+                  await doPublish(false);
+                }}
+              >Batalkan Publikasi</button>
             </div>
           </div>
         </div>

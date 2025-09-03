@@ -16,7 +16,14 @@ export async function GET(_req: NextRequest, ctx: any) {
     include: { progress: true, user: { select: { name: true, image: true, id: true } } },
   });
   if (!roadmap) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(roadmap);
+  // Attach minimal source info if this is a forked roadmap
+  let source: any = null;
+  try {
+    if ((roadmap as any).sourceId) {
+      source = await (prisma as any).roadmap.findUnique({ where: { id: (roadmap as any).sourceId }, select: { id: true, published: true, slug: true, title: true, user: { select: { id: true, name: true, image: true } } } });
+    }
+  } catch {}
+  return NextResponse.json({ ...(roadmap as any), source });
 }
 
 export async function DELETE(_req: NextRequest, ctx: any) {

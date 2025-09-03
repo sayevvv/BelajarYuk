@@ -54,6 +54,34 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+  events: {
+    async signIn({ user, account, profile }: any) {
+      try {
+        if (account?.provider === 'google') {
+          const picture = (profile as any)?.picture as string | undefined;
+          if (picture && user?.id) {
+            const u = await prisma.user.findUnique({ where: { id: user.id }, select: { image: true } });
+            if (!u?.image || u.image !== picture) {
+              await prisma.user.update({ where: { id: user.id }, data: { image: picture } });
+            }
+          }
+        }
+      } catch {}
+    },
+    async linkAccount({ user, account, profile }: any) {
+      try {
+        if (account?.provider === 'google') {
+          const picture = (profile as any)?.picture as string | undefined;
+          if (picture && user?.id) {
+            const u = await prisma.user.findUnique({ where: { id: user.id }, select: { image: true } });
+            if (!u?.image || u.image !== picture) {
+              await prisma.user.update({ where: { id: user.id }, data: { image: picture } });
+            }
+          }
+        }
+      } catch {}
+    },
+  },
   // Secret akan diambil dari process.env.AUTH_SECRET secara otomatis
   // oleh NextAuth, tetapi menambahkannya di sini untuk kejelasan juga baik.
   // Dukung kedua nama env var: NEXTAUTH_SECRET (NextAuth v4) dan AUTH_SECRET (Auth.js v5)

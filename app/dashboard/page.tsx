@@ -4,8 +4,7 @@ import { authOptions } from '@/auth.config';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import RoadmapCard from '@/components/RoadmapCard';
-import HomeStartBox from '@/components/HomeStartBox';
-import { Suspense } from 'react';
+import DashboardTabs from '@/components/DashboardTabs';
 
 export default async function DashboardHomePage() {
   const session = (await getServerSession(authOptions as any)) as any;
@@ -23,8 +22,24 @@ export default async function DashboardHomePage() {
     );
   }
 
-  // Query Recommended Topics (simple heuristic now: top 8 by total usage), Popular (by wilsonScore), For You (by overlap with user history or recent views)
-  const [recommendedTopics, popular, forYou] = await Promise.all([
+  // Simplified flow: no redirect here. Users may arrive from onboarding after login.
+
+  // Query sections: In-Progress, Recommended Topics, Popular, For You
+  const [inProgress, recommendedTopics, popular, forYou] = await Promise.all([
+    // Roadmaps currently being learned by the user (0% < progress < 100%)
+    (async () => {
+      try {
+        const items = await (prisma as any).roadmap.findMany({
+          where: { userId: s.user.id, progress: { is: { percent: { gt: 0, lt: 100 } } } },
+          orderBy: { progress: { updatedAt: 'desc' } },
+          take: 12,
+          select: { id: true, title: true, slug: true, user: { select: { name: true, image: true } }, progress: { select: { percent: true, updatedAt: true } } },
+        });
+        return items;
+      } catch {
+        return [];
+      }
+    })(),
     // Recommend topics by global usage; if Topic table empty, returns []
     (async () => {
       try {
@@ -43,13 +58,13 @@ export default async function DashboardHomePage() {
           where: { published: true },
           orderBy: [{ createdAt: 'desc' }],
           take: 24,
-          select: { id: true, title: true, slug: true },
+          select: { id: true, title: true, slug: true, user: { select: { name: true, image: true } } },
         });
         // Join aggregates if available
         const agg = await (prisma as any).roadmapAggregates.findMany({ where: { roadmapId: { in: items.map((i: any) => i.id) } } });
         const byId: Record<string, any> = Object.fromEntries(agg.map((a: any) => [a.roadmapId, a]));
         return items
-          .map((i: any) => ({ ...i, avgStars: byId[i.id]?.avgStars ?? 0, ratingsCount: byId[i.id]?.ratingsCount ?? 0 }))
+          .map((i: any) => ({ ...i, avgStars: byId[i.id]?.avgStars ?? 0, ratingsCount: byId[i.id]?.ratingsCount ?? 0, bayesianScore: byId[i.id]?.bayesianScore ?? 0 }))
           .sort((a: any, b: any) => (b.bayesianScore ?? 0) - (a.bayesianScore ?? 0) || (b.ratingsCount ?? 0) - (a.ratingsCount ?? 0))
           .slice(0, 12);
       } catch { return []; }
@@ -63,56 +78,69 @@ export default async function DashboardHomePage() {
         const topicIds = Array.from(new Set(myTopics.map((t: any) => t.topicId)));
         const candidates = await (prisma as any).roadmapTopic.findMany({ where: { topicId: { in: topicIds } }, select: { roadmapId: true } });
         const roadmapIds = Array.from(new Set(candidates.map((c: any) => c.roadmapId)));
-        const items = await (prisma as any).roadmap.findMany({ where: { id: { in: roadmapIds }, published: true }, select: { id: true, title: true, slug: true }, take: 12 });
+  const items = await (prisma as any).roadmap.findMany({ where: { id: { in: roadmapIds }, published: true }, select: { id: true, title: true, slug: true, user: { select: { name: true, image: true } } }, take: 12 });
         const agg = await (prisma as any).roadmapAggregates.findMany({ where: { roadmapId: { in: items.map((i: any) => i.id) } } });
         const byId: Record<string, any> = Object.fromEntries(agg.map((a: any) => [a.roadmapId, a]));
-        return items.map((i: any) => ({ ...i, avgStars: byId[i.id]?.avgStars ?? 0, ratingsCount: byId[i.id]?.ratingsCount ?? 0 }));
+  return items.map((i: any) => ({ ...i, avgStars: byId[i.id]?.avgStars ?? 0, ratingsCount: byId[i.id]?.ratingsCount ?? 0 }));
       } catch { return []; }
     })(),
   ]);
 
   return (
-    <div className="h-full overflow-y-auto bg-white">
-      {/* Top search */}
-      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
-          <div className="relative flex-1">
-            <input className="w-full rounded-full bg-slate-100 border border-slate-200 px-4 py-2 pl-10 text-sm outline-none focus:ring-2 focus:ring-blue-200" placeholder="Cari roadmap, topik, atau materi" />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+    <div className="h-full overflow-y-auto bg-white dark:bg-black">
+      {/* Hero CTA */}
+      <div className="relative">
+        <div
+          className="h-48 md:h-60 w-full bg-center bg-cover"
+          style={{ backgroundImage: "url('/assets/fallback.jpg')" }}
+        />
+  <div className="absolute inset-0 bg-black/40" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="max-w-6xl mx-auto w-full px-6">
+            <div className="text-white text-center">
+              <h1 className="text-2xl md:text-3xl font-bold">Buat roadmap-mu sendiri</h1>
+              <p className="mt-1 text-sm md:text-base text-white/90">Mulai perjalanan belajar sesuai tujuanmu.</p>
+              <div className="mt-4">
+                <Link href="/dashboard/new" className="group relative inline-flex items-center justify-center">
+                  {/* Glow/backlight */}
+                  <span className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-500 via-violet-500 to-fuchsia-500 opacity-60 blur-md transition-all duration-300 group-hover:opacity-80 group-hover:blur-lg group-active:opacity-100 group-active:blur-xl" aria-hidden />
+                  {/* Button body */}
+                  <span className="relative rounded-xl bg-white/95 px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-white/60 transition-transform duration-150 group-hover:scale-[1.02] group-active:scale-95 dark:bg-white/10 dark:text-white dark:ring-white/20">
+                    Buat Roadmap
+                  </span>
+                </Link>
+              </div>
+            </div>
           </div>
-          <Link href="/dashboard/new" className="rounded-lg bg-slate-900 text-white text-sm font-semibold px-3 py-2">Buat Baru</Link>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 px-6 py-6">
         {/* Main feed */}
         <div>
-          <HomeStartBox />
+          {/* In-Progress horizontal scroller */}
+          {Array.isArray(inProgress) && inProgress.length > 0 ? (
+            <div className="mt-2">
+              <h3 className="text-sm font-semibold text-slate-900">Sedang Dipelajari</h3>
+              <div className="-mx-6 px-6 overflow-x-auto">
+                <div className="mt-3 flex gap-3 snap-x snap-mandatory pb-2">
+                  {inProgress.map((i: any) => (
+                    <div key={i.id} className="min-w-[260px] max-w-[320px] snap-start">
+                      <div className="">
+                        <RoadmapCard item={i} />
+                        <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                          <div className="h-full bg-blue-600" style={{ width: `${Math.max(0, Math.min(100, i?.progress?.percent ?? 0))}%` }} />
+                        </div>
+                        <div className="mt-1 text-[11px] text-slate-500">{Math.max(0, Math.min(100, i?.progress?.percent ?? 0))}% selesai</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
 
-          {/* Tabs */}
-          <div className="mt-6 flex items-center gap-6 border-b border-slate-200">
-            <button className="-mb-px border-b-2 border-slate-900 pb-3 text-sm font-semibold">For You</button>
-            <button className="-mb-px border-b-2 border-transparent pb-3 text-sm text-slate-500 hover:text-slate-800">Popular</button>
-          </div>
-
-          {/* For You list */}
-          <div className="mt-4 space-y-3">
-            {forYou.length === 0 ? (
-              <div className="text-sm text-slate-500">Belum ada rekomendasi personal. Mulai buat atau pelajari roadmap untuk melihat rekomendasi.</div>
-            ) : (
-              forYou.map((i: any) => <RoadmapCard key={i.id} item={i} />)
-            )}
-          </div>
-
-          {/* Popular list */}
-          <div className="mt-8 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-900">Popular</h3>
-            {popular.length === 0 ? (
-              <div className="text-sm text-slate-500">Belum ada konten populer.</div>
-            ) : (
-              popular.map((i: any) => <RoadmapCard key={i.id} item={i} />)
-            )}
-          </div>
+          <DashboardTabs forYou={forYou} popular={popular} />
         </div>
 
         {/* Sidebar */}

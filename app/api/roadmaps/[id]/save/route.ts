@@ -12,8 +12,8 @@ export async function POST(req: NextRequest, ctx: any) {
   const userId = (session as any).user.id as string;
 
   // Ensure the roadmap is public and not owned by the same user
-  const src = await (prisma as any).roadmap.findUnique({ where: { id } });
-  if (!src || !(src as any).published) return NextResponse.json({ error: 'Roadmap tidak tersedia untuk disimpan' }, { status: 403 });
+  const src = await (prisma as any).roadmap.findUnique({ where: { id }, select: { id: true, published: true, userId: true } });
+  if (!src || !src.published) return NextResponse.json({ error: 'Roadmap tidak lagi publik dan tidak dapat disimpan.' }, { status: 403 });
   if ((src as any).userId === userId) return NextResponse.json({ error: 'Tidak bisa menyimpan roadmap milik sendiri' }, { status: 400 });
 
   await prisma.$transaction(async (tx) => {
