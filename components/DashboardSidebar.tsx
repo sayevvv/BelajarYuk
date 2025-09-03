@@ -66,7 +66,7 @@ export default function DashboardSidebar() {
   }, [expanded]);
 
   return (
-  <aside id="dashboard-sidebar" className={`${expanded ? 'w-64' : 'w-20'} relative bg-white dark:bg-black border-r border-slate-200 dark:border-[#1f1f1f] p-4 flex flex-col ${expanded ? 'items-start' : 'items-center'} h-full transition-[width] duration-200 ease-in-out`}>
+  <aside id="dashboard-sidebar" className={`${expanded ? 'w-64' : 'w-20'} shrink-0 relative bg-white dark:bg-black border-r border-slate-200 dark:border-[#1f1f1f] p-4 flex flex-col ${expanded ? 'items-start' : 'items-center'} h-full transition-[width] duration-200 ease-in-out`}>
       <div className={`flex w-full ${expanded ? 'items-center' : 'items-center'} justify-between`}>
         <Link href="/" title="Beranda" className={`${expanded ? 'flex items-center gap-2' : ''}`}>
           <Image

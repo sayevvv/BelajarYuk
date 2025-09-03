@@ -10,6 +10,7 @@ type Item = {
   ratingsCount?: number | null;
   verified?: boolean;
   user?: { name?: string | null; image?: string | null } | null;
+  topics?: Array<{ slug: string; name: string; isPrimary?: boolean }>;
 };
 
 export default function RoadmapCard({ item }: { item: Item }) {
@@ -35,6 +36,19 @@ export default function RoadmapCard({ item }: { item: Item }) {
                 )}
               </span>
               <span className="truncate">oleh {authorName}</span>
+            </div>
+          ) : null}
+          {Array.isArray(item.topics) && item.topics.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {item.topics.slice(0, 3).map((t) => (
+                <span
+                  key={`${item.id}:${t.slug}`}
+                  className={`px-2 py-0.5 text-[11px] rounded-full border ${t.isPrimary ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'}`}
+                  title={t.isPrimary ? 'Topik Utama' : 'Topik'}
+                >
+                  {t.name}
+                </span>
+              ))}
             </div>
           ) : null}
         </div>

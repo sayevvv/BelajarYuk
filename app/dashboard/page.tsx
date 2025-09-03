@@ -35,7 +35,14 @@ export default async function DashboardHomePage() {
           take: 12,
           select: { id: true, title: true, slug: true, user: { select: { name: true, image: true } }, progress: { select: { percent: true, updatedAt: true } } },
         });
-        return items;
+        // Attach topics
+        const ids = items.map((i: any) => i.id);
+        const topicRows = ids.length ? await (prisma as any).roadmapTopic.findMany({ where: { roadmapId: { in: ids } }, include: { topic: true }, orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }] }) : [];
+        const byRoadmap: Record<string, any[]> = {};
+        for (const r of topicRows) {
+          (byRoadmap[r.roadmapId] ||= []).push({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary });
+        }
+        return items.map((i: any) => ({ ...i, topics: (byRoadmap[i.id] || []).slice(0, 5) }));
       } catch {
         return [];
       }
@@ -63,8 +70,16 @@ export default async function DashboardHomePage() {
         // Join aggregates if available
         const agg = await (prisma as any).roadmapAggregates.findMany({ where: { roadmapId: { in: items.map((i: any) => i.id) } } });
         const byId: Record<string, any> = Object.fromEntries(agg.map((a: any) => [a.roadmapId, a]));
+        // Attach topics
+        const topicRows = items.length ? await (prisma as any).roadmapTopic.findMany({ where: { roadmapId: { in: items.map((i: any) => i.id) } }, include: { topic: true }, orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }] }) : [];
+        const topicsByRoadmap: Record<string, Array<{ slug: string; name: string; isPrimary: boolean }>> = {};
+        for (const r of topicRows) {
+          const arr = (topicsByRoadmap[r.roadmapId] ||= []);
+          if (r.topic) arr.push({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary });
+        }
         return items
           .map((i: any) => ({ ...i, avgStars: byId[i.id]?.avgStars ?? 0, ratingsCount: byId[i.id]?.ratingsCount ?? 0, bayesianScore: byId[i.id]?.bayesianScore ?? 0 }))
+          .map((i: any) => ({ ...i, topics: (topicsByRoadmap[i.id] || []).slice(0, 5) }))
           .sort((a: any, b: any) => (b.bayesianScore ?? 0) - (a.bayesianScore ?? 0) || (b.ratingsCount ?? 0) - (a.ratingsCount ?? 0))
           .slice(0, 12);
       } catch { return []; }
@@ -72,16 +87,22 @@ export default async function DashboardHomePage() {
     // For You: prioritize user’s own topics
     (async () => {
       try {
-        const my = await (prisma as any).roadmap.findMany({ where: { userId: s.user.id }, select: { id: true } });
+  const my = await (prisma as any).roadmap.findMany({ where: { userId: s.user.id }, select: { id: true } });
         const myIds = my.map((m: any) => m.id);
         const myTopics = await (prisma as any).roadmapTopic.findMany({ where: { roadmapId: { in: myIds } }, select: { topicId: true } });
         const topicIds = Array.from(new Set(myTopics.map((t: any) => t.topicId)));
         const candidates = await (prisma as any).roadmapTopic.findMany({ where: { topicId: { in: topicIds } }, select: { roadmapId: true } });
         const roadmapIds = Array.from(new Set(candidates.map((c: any) => c.roadmapId)));
-  const items = await (prisma as any).roadmap.findMany({ where: { id: { in: roadmapIds }, published: true }, select: { id: true, title: true, slug: true, user: { select: { name: true, image: true } } }, take: 12 });
+        const items = await (prisma as any).roadmap.findMany({ where: { id: { in: roadmapIds }, published: true }, select: { id: true, title: true, slug: true, user: { select: { name: true, image: true } } }, take: 12 });
         const agg = await (prisma as any).roadmapAggregates.findMany({ where: { roadmapId: { in: items.map((i: any) => i.id) } } });
         const byId: Record<string, any> = Object.fromEntries(agg.map((a: any) => [a.roadmapId, a]));
-  return items.map((i: any) => ({ ...i, avgStars: byId[i.id]?.avgStars ?? 0, ratingsCount: byId[i.id]?.ratingsCount ?? 0 }));
+        // Attach topics
+        const topicRows = items.length ? await (prisma as any).roadmapTopic.findMany({ where: { roadmapId: { in: items.map((i: any) => i.id) } }, include: { topic: true }, orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }] }) : [];
+        const byRoadmap2: Record<string, any[]> = {};
+        for (const r of topicRows) {
+          (byRoadmap2[r.roadmapId] ||= []).push({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary });
+        }
+        return items.map((i: any) => ({ ...i, avgStars: byId[i.id]?.avgStars ?? 0, ratingsCount: byId[i.id]?.ratingsCount ?? 0, topics: (byRoadmap2[i.id] || []).slice(0, 5) }));
       } catch { return []; }
     })(),
   ]);
@@ -115,14 +136,14 @@ export default async function DashboardHomePage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 px-6 py-6">
+  <div className="max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 px-4 sm:px-6 py-6">
         {/* Main feed */}
         <div>
           {/* In-Progress horizontal scroller */}
           {Array.isArray(inProgress) && inProgress.length > 0 ? (
             <div className="mt-2">
               <h3 className="text-sm font-semibold text-slate-900">Sedang Dipelajari</h3>
-              <div className="-mx-6 px-6 overflow-x-auto">
+      <div className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
                 <div className="mt-3 flex gap-3 snap-x snap-mandatory pb-2">
                   {inProgress.map((i: any) => (
                     <div key={i.id} className="min-w-[260px] max-w-[320px] snap-start">

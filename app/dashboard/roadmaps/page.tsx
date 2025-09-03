@@ -4,6 +4,7 @@ import { authOptions } from '@/auth.config';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import RoadmapGridClient from '@/components/RoadmapGridClient';
+import RoadmapCard from '@/components/RoadmapCard';
 import RoadmapSortSelect from '@/components/RoadmapSortSelect';
 
 export default async function RoadmapIndexPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
@@ -43,7 +44,28 @@ export default async function RoadmapIndexPage({ searchParams }: { searchParams:
 
   const items = await prisma.roadmap.findMany({ where: { userId: session.user.id }, orderBy });
   const own = items.filter((i: any) => !i.sourceId);
-  const saved = items.filter((i: any) => !!i.sourceId);
+  // Attach topics for own roadmaps
+  const ownTopicRows = own.length ? await (prisma as any).roadmapTopic.findMany({ where: { roadmapId: { in: own.map((i: any) => i.id) } }, include: { topic: true }, orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }] }) : [];
+  const topicsByOwn: Record<string, Array<{ slug: string; name: string; isPrimary: boolean }>> = {};
+  for (const r of ownTopicRows) {
+    const arr = (topicsByOwn[r.roadmapId] ||= []);
+    if (r.topic) arr.push({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary });
+  }
+  const ownWithTopics = own.map((i: any) => ({ ...i, topics: (topicsByOwn[i.id] || []).slice(0, 5) }));
+  // Saved from public: join via RoadmapSave -> Roadmap
+  const saves = await prisma.roadmapSave.findMany({ where: { userId: session.user.id }, orderBy: { createdAt: 'desc' } });
+  const savedIds = saves.map((s: any) => s.roadmapId);
+  const savedItemsRaw = savedIds.length ? await prisma.roadmap.findMany({ where: { id: { in: savedIds } }, select: { id: true, title: true, slug: true, updatedAt: true, user: { select: { name: true, image: true } } } }) : [];
+  // Attach topics to saved items
+  const savedTopicRows = savedItemsRaw.length ? await (prisma as any).roadmapTopic.findMany({ where: { roadmapId: { in: savedItemsRaw.map((i: any) => i.id) } }, include: { topic: true }, orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }] }) : [];
+  const topicsBySaved: Record<string, Array<{ slug: string; name: string; isPrimary: boolean }>> = {};
+  for (const r of savedTopicRows) {
+    const arr = (topicsBySaved[r.roadmapId] ||= []);
+    if (r.topic) arr.push({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary });
+  }
+  const savedWithTopics = savedItemsRaw.map((i: any) => ({ ...i, topics: (topicsBySaved[i.id] || []).slice(0, 5) }));
+  const saveOrder = Object.fromEntries(savedIds.map((id, idx) => [id, idx]));
+  const savedItems = savedWithTopics.sort((a: any, b: any) => (saveOrder[a.id] ?? 0) - (saveOrder[b.id] ?? 0));
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-black">
@@ -54,7 +76,7 @@ export default async function RoadmapIndexPage({ searchParams }: { searchParams:
         </div>
       </header>
   <div className="p-8">
-        {items.length === 0 ? (
+        {own.length + savedItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed border-slate-200 rounded-xl dark:border-slate-800">
             <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-200">Belum Ada Roadmap</h2>
             <p className="mt-2 text-slate-500 dark:text-slate-400">Mulai dari membuat roadmap baru.</p>
@@ -68,16 +90,20 @@ export default async function RoadmapIndexPage({ searchParams }: { searchParams:
                   <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Dibuat oleh Saya</h2>
                   <div className="text-sm text-slate-500">{own.length} item</div>
                 </div>
-                <RoadmapGridClient items={own as any} />
+                <RoadmapGridClient items={ownWithTopics as any} />
               </section>
             )}
-            {saved.length > 0 && (
+            {savedItems.length > 0 && (
               <section>
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Disimpan dari Luar</h2>
-                  <div className="text-sm text-slate-500">{saved.length} item</div>
+                  <div className="text-sm text-slate-500">{savedItems.length} item</div>
                 </div>
-                <RoadmapGridClient items={saved as any} />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {savedItems.map((i: any) => (
+                    <RoadmapCard key={i.id} item={i} />
+                  ))}
+                </div>
               </section>
             )}
           </div>

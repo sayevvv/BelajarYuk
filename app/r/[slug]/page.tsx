@@ -24,9 +24,9 @@ async function getData(slug: string) {
   return res.json();
 }
 
-export default async function PublicRoadmapPage(props: any) {
-  const { params } = (props || {}) as { params: { slug: string } };
-  const roadmap = await getData(params.slug);
+export default async function PublicRoadmapPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const roadmap = await getData(slug);
   if (!roadmap) return <div className="p-8">Tidak ditemukan.</div>;
   const content = (roadmap as any).content as any;
   const session = (await getServerSession(authOptions as any)) as any;

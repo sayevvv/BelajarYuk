@@ -43,13 +43,13 @@ export default function SignupCard() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+  <form onSubmit={onSubmit} className="space-y-4">
       <input
         type="text"
         placeholder="Nama lengkap (opsional)"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="w-full h-12 px-4 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 font-medium tracking-wide focus:outline-none focus:ring-2 focus:ring-slate-400"
+    className="w-full h-12 rounded-xl px-4 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
       />
       <input
         type="email"
@@ -58,7 +58,7 @@ export default function SignupCard() {
         placeholder="Alamat email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="w-full h-12 px-4 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 font-medium tracking-wide focus:outline-none focus:ring-2 focus:ring-slate-400"
+    className="w-full h-12 rounded-xl px-4 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
         required
       />
       <input
@@ -67,7 +67,7 @@ export default function SignupCard() {
         placeholder="Kata sandi (min. 8 karakter)"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="w-full h-12 px-4 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 font-medium tracking-wide focus:outline-none focus:ring-2 focus:ring-slate-400"
+    className="w-full h-12 rounded-xl px-4 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
         minLength={8}
         required
       />
@@ -84,7 +84,7 @@ export default function SignupCard() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full h-12 bg-slate-900 text-white font-medium tracking-wide hover:bg-slate-800 transition disabled:opacity-60 disabled:cursor-not-allowed"
+  className="w-full h-12 rounded-xl bg-slate-900 text-white font-medium tracking-wide hover:bg-slate-800 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading ? "Memproses..." : "Daftar"}
       </button>

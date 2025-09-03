@@ -75,6 +75,14 @@
   .text-balance {
     text-wrap: balance;
   }
+  /* Hide scrollbars but keep scroll functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and old Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
   /* Force logo swap regardless of Next/Image wrappers */
   .logo-dark { display: block; }
   .logo-light { display: none; }

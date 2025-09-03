@@ -8,6 +8,11 @@ export async function GET(_req: NextRequest, ctx: any) {
   const { slug } = await (ctx as any).params;
   const roadmap = await (prisma as any).roadmap.findFirst({ where: { slug, published: true }, include: { user: { select: { name: true, id: true } } } });
     if (!roadmap) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    // join topics
+    try {
+      const rows = await (prisma as any).roadmapTopic.findMany({ where: { roadmapId: roadmap.id }, include: { topic: true }, orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }] });
+      (roadmap as any).topics = rows.filter((r: any) => r.topic).map((r: any) => ({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary }));
+    } catch {}
     return NextResponse.json(roadmap, {
       headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
     });

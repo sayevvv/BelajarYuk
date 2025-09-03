@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { classifyHeuristic } from '@/lib/topics/classifier';
+import { ensureTopics } from '@/lib/topics/seed';
 
 export async function POST(req: NextRequest, ctx: any) {
   const { id } = await (ctx as any).params;
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest, ctx: any) {
 
   // Ensure topics exist (seed expected to have created these)
   const slugs = [result.primary, ...result.secondary];
+  try { await ensureTopics(slugs); } catch {}
   const topics = await (prisma as any).topic.findMany({ where: { slug: { in: slugs } } });
   const bySlug: Record<string, any> = Object.fromEntries(topics.map((t: any) => [t.slug, t]));
 
@@ -39,11 +41,12 @@ export async function POST(req: NextRequest, ctx: any) {
   for (const r of rows) {
     const t = bySlug[r.slug];
     if (!t) continue;
-    await (prisma as any).roadmapTopic.upsert({
-      where: { roadmapId_versionId_topicId: { roadmapId: id, versionId: null, topicId: t.id } },
-      update: { confidence: r.conf, isPrimary: r.primary, source: 'ai' },
-      create: { roadmapId: id, versionId: null, topicId: t.id, confidence: r.conf, isPrimary: r.primary, source: 'ai' },
-    });
+    const existing = await (prisma as any).roadmapTopic.findFirst({ where: { roadmapId: id, topicId: t.id, versionId: null } });
+    if (existing) {
+      await (prisma as any).roadmapTopic.update({ where: { id: existing.id }, data: { confidence: r.conf, isPrimary: r.primary, source: 'ai' } });
+    } else {
+      await (prisma as any).roadmapTopic.create({ data: { roadmapId: id, versionId: null, topicId: t.id, confidence: r.conf, isPrimary: r.primary, source: 'ai' } });
+    }
   }
 
   return NextResponse.json({ ok: true, labels: result });

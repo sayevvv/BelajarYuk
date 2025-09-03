@@ -136,6 +136,9 @@ export default function NewRoadmapPage() {
   const [activePromptMode, setActivePromptMode] = useState<'simple' | 'advanced'>('simple');
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Model selection: default uses Gemini; alt uses GitHub Models
+  const [useAltModel, setUseAltModel] = useState(false);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   // Chat-like AI edit state (now lives in the left panel after roadmap exists)
   const [chatMessages, setChatMessages] = useState<{ role: 'user'|'assistant'; content: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -267,7 +270,8 @@ export default function NewRoadmapPage() {
       setTopic(topicToSend);
     }
     try {
-      const response = await fetch('/api/generate-roadmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: topicToSend, details, promptMode }), });
+      const endpoint = useAltModel ? '/api/generate-roadmap-gh' : '/api/generate-roadmap';
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: topicToSend, details, promptMode }), });
       if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
       const data = await response.json();
       const parsedData = roadmapSchema.safeParse(data);
@@ -595,7 +599,7 @@ export default function NewRoadmapPage() {
       <div className="flex h-full items-center justify-center"><p>Loading session...</p></div>
     ) : (
   <div className="flex h-full">
-  <div className="w-[400px] bg-white dark:bg-black p-8 flex flex-col flex-shrink-0 border-r border-slate-200 dark:border-slate-800">
+  <div className="w-[400px] bg-white dark:bg-black p-8 flex flex-col flex-shrink-0 min-h-0 border-r border-slate-200 dark:border-slate-800">
         {!roadmapData || newFormOpen ? (
           <>
             <header className={"flex items-center justify-between gap-3"}>
@@ -620,13 +624,13 @@ export default function NewRoadmapPage() {
                 <span>Sedang membuat roadmap, mohon menunggu…</span>
               </div>
             )}
-            <form onSubmit={handleSubmit} className="flex flex-col flex-grow mt-8">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-grow min-h-0 mt-8">
               {/* Pilih mode prompt */}
               <div className="flex p-1 mb-6 bg-slate-100 rounded-lg">
                 <button type="button" disabled={genActive} onClick={() => setPromptMode('simple')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'simple' ? 'bg-white shadow text-blue-600' : 'text-slate-500'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Simple</button>
                 <button type="button" disabled={genActive} onClick={() => setPromptMode('advanced')} className={`w-1/2 p-2 text-sm font-semibold rounded-md transition-colors ${promptMode === 'advanced' ? 'bg-white shadow text-blue-600' : 'text-slate-500'} ${genActive ? 'opacity-60 cursor-not-allowed' : ''}`}>Advanced</button>
               </div>
-              <div className="mt-4 flex-grow overflow-y-auto pr-2">
+              <div className="mt-4 flex-grow overflow-y-auto pr-2 min-h-0 no-scrollbar">
                 {promptMode === 'simple' ? (
                   <div>
                     <label htmlFor="prompt" className="block text-sm font-medium text-slate-700 mb-1.5">Apa yang ingin kamu pelajari?</label>
@@ -706,6 +710,45 @@ export default function NewRoadmapPage() {
                 )}
               </div>
               <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-black pt-6 pb-2">
+                {/* Model drop-up */}
+                <div className="mb-3 relative">
+                  <div className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Model AI</div>
+                  <button
+                    type="button"
+                    disabled={genActive}
+                    aria-haspopup="listbox"
+                    aria-expanded={modelMenuOpen}
+                    onClick={() => setModelMenuOpen((v)=>!v)}
+                    className={`w-full justify-between inline-flex items-center gap-2 border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 ${genActive ? 'opacity-60 cursor-not-allowed' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                  >
+                    <span className="truncate">{useAltModel ? 'GitHub Models' : 'Gemini 1.5 Flash'}</span>
+                    <svg className={`h-4 w-4 transition-transform ${modelMenuOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 011.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd"/></svg>
+                  </button>
+                  {modelMenuOpen && (
+                    <div className="absolute bottom-full left-0 right-0 mb-2 z-20 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg overflow-hidden">
+                      <ul role="listbox" className="py-1 text-sm">
+                        <li>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={!useAltModel}
+                            className={`w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 ${!useAltModel ? 'text-blue-600 font-semibold' : 'text-slate-700 dark:text-slate-200'}`}
+                            onClick={() => { setUseAltModel(false); setModelMenuOpen(false); }}
+                          >Gemini 1.5 Flash</button>
+                        </li>
+                        <li>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={useAltModel}
+                            className={`w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 ${useAltModel ? 'text-blue-600 font-semibold' : 'text-slate-700 dark:text-slate-200'}`}
+                            onClick={() => { setUseAltModel(true); setModelMenuOpen(false); }}
+                          >GitHub Models</button>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
                 <button type="submit" disabled={isLoading || genActive} className="w-full px-4 py-3 font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-slate-400 disabled:cursor-not-allowed">{(isLoading || genActive) ? 'Membuat Roadmap...' : 'Buat Roadmap'}</button>
               </div>
             </form>
