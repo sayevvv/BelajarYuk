@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Bookmark } from "lucide-react";
@@ -9,6 +9,20 @@ export default function SaveRoadmapButton({ roadmapId }: { roadmapId: string }) 
   const [saved, setSaved] = useState(false);
   const router = useRouter();
   const { show } = useToast();
+
+  // Hydrate initial saved state
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/roadmaps/${roadmapId}/save`, { method: 'GET' });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => ({} as any));
+        if (!ignore) setSaved(!!data?.saved);
+      } catch {}
+    })();
+    return () => { ignore = true; };
+  }, [roadmapId]);
 
   async function handleSave() {
     try {
@@ -23,8 +37,36 @@ export default function SaveRoadmapButton({ roadmapId }: { roadmapId: string }) 
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Gagal menyimpan roadmap');
       }
+      const data = await res.json().catch(() => ({} as any));
       setSaved(true);
       show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan.' });
+      // If cloneId returned, redirect to private tracker so user can start immediately
+      if (data?.cloneId) {
+        router.push(`/dashboard/roadmaps/${data.cloneId}?from=browse`);
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+      show({ type: 'error', title: 'Gagal', message: (e as Error).message });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleUnsave() {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/roadmaps/${roadmapId}/save`, { method: 'DELETE' });
+      if (!res.ok) {
+        if (res.status === 401) {
+          router.push(`/login?callbackUrl=/dashboard/roadmaps`);
+          return;
+        }
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Gagal menghapus simpanan');
+      }
+      setSaved(false);
+      show({ type: 'info', title: 'Dihapus', message: 'Roadmap dihapus dari tersimpan.' });
     } catch (e) {
       console.error(e);
       show({ type: 'error', title: 'Gagal', message: (e as Error).message });
@@ -34,9 +76,16 @@ export default function SaveRoadmapButton({ roadmapId }: { roadmapId: string }) 
   }
 
   return (
-    <button onClick={handleSave} disabled={loading || saved} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
-      <Bookmark className="h-4 w-4" />
-      {loading ? 'Menyimpan…' : (saved ? 'Tersimpan' : 'Simpan')}
-    </button>
+    saved ? (
+      <button onClick={handleUnsave} disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-300 dark:bg-white/10 dark:text-slate-100 dark:hover:bg-white/15 disabled:opacity-50">
+        <Bookmark className="h-4 w-4" />
+        {loading ? 'Menghapus…' : 'Tersimpan'}
+      </button>
+    ) : (
+      <button onClick={handleSave} disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+        <Bookmark className="h-4 w-4" />
+        {loading ? 'Menyimpan…' : 'Simpan'}
+      </button>
+    )
   );
 }

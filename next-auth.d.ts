@@ -9,6 +9,7 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string; // Tambahkan properti id di sini
+  role?: 'USER' | 'ADMIN';
     } & DefaultSession['user'];
   }
 }

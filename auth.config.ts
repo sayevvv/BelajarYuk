@@ -50,8 +50,20 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
+        // Attach role from token if present
+        if ((token as any).role) (session.user as any).role = (token as any).role;
       }
       return session;
+    },
+  async jwt({ token, user }) {
+      // On first sign-in, load role; on subsequent calls, keep existing
+      try {
+        if (user?.id) {
+          const u = await (prisma as any).user.findUnique({ where: { id: user.id }, select: { role: true } });
+          if (u?.role) (token as any).role = u.role;
+        }
+      } catch {}
+      return token;
     },
   },
   events: {

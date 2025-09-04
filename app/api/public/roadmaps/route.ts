@@ -14,14 +14,15 @@ export async function GET(req: NextRequest) {
     const take = pageSize;
     const skip = (page - 1) * pageSize;
 
-    let orderBy: any = { publishedAt: 'desc' };
+  let orderBy: any = { publishedAt: 'desc' };
     if (sort === 'oldest') orderBy = { publishedAt: 'asc' };
     else if (sort === 'title_asc') orderBy = { title: 'asc' };
     else if (sort === 'title_desc') orderBy = { title: 'desc' };
+  else if (sort === 'verified') orderBy = [{ verified: 'desc' }, { publishedAt: 'desc' }];
 
     const where: any = { published: true, ...(q ? { title: { contains: q, mode: 'insensitive' as const } } : {}) };
     const [items, total] = await Promise.all([
-      (prisma as any).roadmap.findMany({ where, orderBy, take, skip, select: { id: true, userId: true, title: true, slug: true, publishedAt: true, user: { select: { name: true } }, content: true } }),
+  (prisma as any).roadmap.findMany({ where, orderBy, take, skip, select: { id: true, userId: true, title: true, slug: true, publishedAt: true, verified: true, user: { select: { name: true } }, content: true } }),
       (prisma as any).roadmap.count({ where }),
     ]);
 
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
       aggRows.map((a: any) => [a.roadmapId, { avgStars: a.avgStars ?? 0, ratingsCount: a.ratingsCount ?? 0 }])
     );
 
-    const itemsWithTopics = items.map((i: any) => ({
+  const itemsWithTopics = items.map((i: any) => ({
       ...i,
       topics: (topicsByRoadmap[i.id] || []).slice(0, 5),
       avgStars: aggById[i.id]?.avgStars ?? 0,

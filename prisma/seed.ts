@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import argon2 from 'argon2';
 const prisma = new PrismaClient();
 
 const TOPICS = [
@@ -20,6 +21,26 @@ const TOPICS = [
 ];
 
 async function main() {
+  // Ensure admin
+  const email = process.env.SEED_ADMIN_EMAIL || 'admin@example.com';
+  const password = process.env.SEED_ADMIN_PASSWORD || 'admin123';
+  const name = process.env.SEED_ADMIN_NAME || 'Admin';
+  const hash = await argon2.hash(password);
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    if ((existing as any).role !== 'ADMIN') {
+      await (prisma as any).user.update({ where: { id: existing.id }, data: { role: 'ADMIN' } });
+    }
+    if (!existing.passwordHash) {
+      await prisma.user.update({ where: { id: existing.id }, data: { passwordHash: hash } });
+    }
+    console.log(`Admin ensured: ${email}`);
+  } else {
+  await (prisma as any).user.create({ data: { email, name, passwordHash: hash, role: 'ADMIN' } });
+    console.log(`Admin created: ${email} / ${password}`);
+  }
+
+  // Seed topics
   for (const t of TOPICS) {
   await (prisma as any).topic.upsert({
       where: { slug: t.slug },

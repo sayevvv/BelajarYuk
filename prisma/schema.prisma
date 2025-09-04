@@ -51,6 +51,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   roadmaps      Roadmap[] // Relasi ke Roadmap
+  role          Role      @default(USER)
 }
 
 model VerificationToken {
@@ -79,6 +80,7 @@ model Roadmap {
   published   Boolean   @default(false)
   slug        String?   @unique
   publishedAt DateTime?
+  verified    Boolean   @default(false)
 
   progress RoadmapProgress?
 
@@ -87,6 +89,11 @@ model Roadmap {
 
   @@unique([userId, sourceId])
   @@index([userId, contentHash, title])
+}
+
+enum Role {
+  USER
+  ADMIN
 }
 
 model RoadmapProgress {
