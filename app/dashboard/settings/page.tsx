@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -27,9 +28,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div className="h-full overflow-y-auto p-4 sm:p-6">
       <div className="max-w-2xl">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/profile" aria-label="Kembali" className="inline-flex lg:hidden h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-[#151515]">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
+        </div>
 
         {/* Akun */}
         <section className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
