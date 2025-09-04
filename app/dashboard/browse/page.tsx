@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import SaveRoadmapButton from '@/components/SaveRoadmapButton';
+import RoadmapCard from '@/components/RoadmapCard';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth.config';
 
@@ -60,31 +61,25 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
         </form>
       </header>
       <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {data?.items?.map((item: any) => (
-          <div key={item.id} className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all">
-            <Link href={`/r/${item.slug}`} className="block">
-              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg truncate">{item.title}</h3>
-              <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">oleh {item.user?.name || 'Pengguna'}</div>
-              {Array.isArray(item.topics) && item.topics.length > 0 ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {item.topics.slice(0, 4).map((t: any) => (
-                    <span key={`${item.id}:${t.slug}`} className={`px-2 py-0.5 text-[11px] rounded-full border ${t.isPrimary ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-700/50 dark:text-slate-200 dark:border-slate-600'}`}>
-                      {t.name}
-                    </span>
-                  ))}
+        {data?.items?.map((item: any) => {
+          const own = s?.user?.id && s.user.id === item.userId;
+      return (
+            <div key={item.id} className="relative">
+              <RoadmapCard
+                item={item}
+        hideInlineTopics={false}
+        hideRatings={own}
+        own={!!own}
+        showBottomChip
+              />
+              {!own && (
+                <div className="absolute left-4 bottom-3">
+                  <SaveRoadmapButton roadmapId={item.id} />
                 </div>
-              ) : null}
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-4 border-t border-slate-200 dark:border-slate-700 pt-4">
-                <strong>Tahapan:</strong> {item.content?.milestones?.length || 0}
-              </p>
-            </Link>
-            {(!s?.user?.id || s.user.id !== item.userId) && (
-              <div className="mt-4">
-                <SaveRoadmapButton roadmapId={item.id} />
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </div>
       {/* Pagination */}
       <div className="px-8 pb-10 flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">

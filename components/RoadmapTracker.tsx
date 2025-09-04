@@ -6,7 +6,20 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/ui/ToastProvider';
 import RoadmapGraph from './RoadmapGraph';
-import { LayoutList, GitBranch, CheckCircle, ArrowLeft } from 'lucide-react';
+import {
+  LayoutList,
+  GitBranch,
+  CheckCircle,
+  ArrowLeft,
+  Globe,
+  XCircle,
+  Sparkles,
+  RefreshCcw,
+  PlayCircle,
+  Upload,
+  EyeOff,
+  Trash2,
+} from 'lucide-react';
 import RatingSummary from '@/components/RatingSummary';
 import TopicChips from '@/components/TopicChips';
 import dynamic from 'next/dynamic';
@@ -44,6 +57,8 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const [confirmUnpublishOpen, setConfirmUnpublishOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmDeleteText, setConfirmDeleteText] = useState('');
   // Start-date disabled for saved roadmaps
 
   // Load roadmap + progress
@@ -222,13 +237,12 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
     setConfirmUnpublishOpen(true);
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Hapus roadmap ini? Tindakan ini tidak dapat dibatalkan.')) return;
+  const performDelete = async () => {
     try {
       const res = await fetch(`/api/roadmaps/${roadmapId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Gagal menghapus roadmap');
       show({ type: 'success', title: 'Dihapus', message: 'Roadmap berhasil dihapus.' });
-  router.push('/dashboard/roadmaps');
+      router.push('/dashboard/roadmaps');
     } catch (e: any) {
       setError(e.message || 'Gagal menghapus roadmap');
       show({ type: 'error', title: 'Gagal', message: e.message || 'Gagal menghapus roadmap' });
@@ -362,16 +376,22 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                 {menuOpen && (
               <div className="absolute right-0 mt-2 w-56 rounded-lg border border-slate-200 dark:border-[#2a2a2a] bg-white dark:bg-[#0f0f0f] shadow-lg z-20 p-1">
                 {roadmap.published && roadmap.slug ? (
-                  <Link href={`/r/${roadmap.slug}`} target="_blank" className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]">Lihat Publik</Link>
+                  <Link href={`/r/${roadmap.slug}`} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]">
+                    <Globe className="h-4 w-4" />
+                    <span>Lihat Publik</span>
+                  </Link>
                 ) : null}
                 {preparing ? (
-                  <button className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" onClick={() => { setMenuOpen(false); try { prepareCtrl?.abort(); } catch {} setPreparing(false); setPrepareCtrl(null); setPrepareError('Dibatalkan.'); }}>Batalkan Generate</button>
+                  <button className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" onClick={() => { setMenuOpen(false); try { prepareCtrl?.abort(); } catch {} setPreparing(false); setPrepareCtrl(null); setPrepareError('Dibatalkan.'); }}>
+                    <XCircle className="h-4 w-4" />
+                    <span>Batalkan Generate</span>
+                  </button>
                 ) : (
                   <>
                     {/* Initial generate when materials are not ready */}
                     {!materialsReady && !(roadmap as any).published && !(roadmap as any).sourceId && (
                       <button
-                        className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
+                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
                         onClick={async () => {
                           setMenuOpen(false);
                           setPreparing(true); setPrepareError(null); setPreparePartial(false);
@@ -391,15 +411,21 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                             setPrepareError(e.message || 'Gagal menyiapkan materi');
                           } finally { setPreparing(false); setPrepareCtrl(null); }
                         }}
-                      >Generate Materi</button>
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        <span>Generate Materi</span>
+                      </button>
                     )}
                     {/* Regenerate option shown when there are any materials */}
                     {hasAnyMaterials && !(roadmap as any).published && !(roadmap as any).sourceId && (
-                      <button className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" onClick={() => { setMenuOpen(false); setConfirmResetOpen(true); }}>Generate Ulang…</button>
+                      <button className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]" onClick={() => { setMenuOpen(false); setConfirmResetOpen(true); }}>
+                        <RefreshCcw className="h-4 w-4" />
+                        <span>Generate Ulang…</span>
+                      </button>
                     )}
                     {(preparePartial || prepareError) && (
                       <button
-                        className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
+                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
                         onClick={async () => {
                           setMenuOpen(false);
                           setPreparing(true); setPrepareError(null); setPreparePartial(false);
@@ -420,13 +446,16 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                             setPrepareError(e.message || 'Gagal menyiapkan materi');
                           } finally { setPreparing(false); setPrepareCtrl(null); }
                         }}
-                      >Lanjutkan Generate</button>
+                      >
+                        <PlayCircle className="h-4 w-4" />
+                        <span>Lanjutkan Generate</span>
+                      </button>
                     )}
                   </>
                 )}
                 {!(roadmap as any).sourceId ? (
                   <button
-                    className="block w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
+                    className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-md bg-slate-50 dark:bg-[#141414] hover:bg-slate-100 dark:hover:bg-[#1a1a1a]"
                     disabled={publishing || (!(roadmap as any).published && !materialsReady)}
                     title={
                       (roadmap as any).published
@@ -434,9 +463,24 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                         : (!materialsReady ? 'Generate materi belajar terlebih dahulu sebelum mempublikasikan' : 'Publikasikan')
                     }
                     onClick={() => { setMenuOpen(false); handlePublish(!(roadmap as any).published); }}
-                  >{(roadmap as any).published ? 'Batalkan Publikasi' : 'Publikasikan'}</button>
+                  >
+                    {(roadmap as any).published ? (
+                      <>
+                        <EyeOff className="h-4 w-4" />
+                        <span>Batalkan Publikasi</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        <span>Publikasikan</span>
+                      </>
+                    )}
+                  </button>
                 ) : null}
-                <button className="block w-full text-left px-3 py-2 text-sm rounded-md bg-red-50 text-red-700 hover:bg-red-100 dark:bg-[#1a0f0f] dark:text-red-300" onClick={() => { setMenuOpen(false); handleDelete(); }}>Hapus</button>
+                <button className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-md bg-red-50 text-red-700 hover:bg-red-100 dark:bg-[#1a0f0f] dark:text-red-300" onClick={() => { setMenuOpen(false); setConfirmDeleteOpen(true); }}>
+                  <Trash2 className="h-4 w-4" />
+                  <span>Hapus</span>
+                </button>
               </div>
             )}
           </div>
@@ -506,6 +550,51 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                   await doPublish(false);
                 }}
               >Batalkan Publikasi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete modal (GitHub-style) */}
+      {confirmDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmDeleteOpen(false)} />
+          <div className="relative bg-white dark:bg-[#0f0f0f] rounded-xl shadow-xl w-[min(560px,92vw)]">
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-[#1f1f1f]">
+              <h3 className="text-base font-semibold text-red-700 dark:text-red-400 flex items-center gap-2">
+                <Trash2 className="h-5 w-5" /> Hapus Roadmap?
+              </h3>
+            </div>
+            <div className="p-5 text-sm text-slate-700 dark:text-neutral-300 space-y-4">
+              <p className="leading-relaxed">
+                Anda akan menghapus roadmap ini beserta progres belajar Anda. Tindakan ini <span className="font-semibold text-red-700 dark:text-red-400">tidak dapat dibatalkan</span>.
+              </p>
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                <div className="text-[13px]">Untuk konfirmasi, ketik judul roadmap berikut ini:</div>
+                <div className="mt-1 font-mono text-[13px]">{roadmap.title}</div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Ketik judul roadmap untuk melanjutkan</label>
+                <input
+                  autoFocus
+                  value={confirmDeleteText}
+                  onChange={(e) => setConfirmDeleteText(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 dark:border-[#2a2a2a] bg-white dark:bg-[#0f0f0f] px-3 py-2 text-sm"
+                  placeholder={roadmap.title}
+                />
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-slate-200 dark:border-[#1f1f1f] flex justify-end gap-2">
+              <button className="px-3 py-1.5 rounded border text-sm" onClick={() => setConfirmDeleteOpen(false)}>Batal</button>
+              <button
+                className="px-3 py-1.5 rounded bg-red-600 text-white text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={confirmDeleteText !== roadmap.title}
+                onClick={async () => {
+                  setConfirmDeleteOpen(false);
+                  setConfirmDeleteText('');
+                  await performDelete();
+                }}
+              >Saya mengerti, Hapus Roadmap</button>
             </div>
           </div>
         </div>

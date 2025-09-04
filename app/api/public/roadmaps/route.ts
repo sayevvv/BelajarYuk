@@ -35,7 +35,20 @@ export async function GET(req: NextRequest) {
       const arr = (topicsByRoadmap[r.roadmapId] ||= []);
       if (r.topic) arr.push({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary });
     }
-    const itemsWithTopics = items.map((i: any) => ({ ...i, topics: (topicsByRoadmap[i.id] || []).slice(0, 5) }));
+    // Fetch rating aggregates
+    const aggRows = ids.length
+      ? await (prisma as any).roadmapAggregates.findMany({ where: { roadmapId: { in: ids } } })
+      : [];
+    const aggById: Record<string, { avgStars?: number; ratingsCount?: number }> = Object.fromEntries(
+      aggRows.map((a: any) => [a.roadmapId, { avgStars: a.avgStars ?? 0, ratingsCount: a.ratingsCount ?? 0 }])
+    );
+
+    const itemsWithTopics = items.map((i: any) => ({
+      ...i,
+      topics: (topicsByRoadmap[i.id] || []).slice(0, 5),
+      avgStars: aggById[i.id]?.avgStars ?? 0,
+      ratingsCount: aggById[i.id]?.ratingsCount ?? 0,
+    }));
 
     const totalPages = Math.max(Math.ceil(total / pageSize), 1);
   return NextResponse.json({ items: itemsWithTopics, total, page, pageSize, totalPages }, {

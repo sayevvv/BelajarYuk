@@ -33,7 +33,7 @@ export default async function DashboardHomePage() {
           where: { userId: s.user.id, progress: { is: { percent: { gt: 0, lt: 100 } } } },
           orderBy: { progress: { updatedAt: 'desc' } },
           take: 12,
-          select: { id: true, title: true, slug: true, user: { select: { name: true, image: true } }, progress: { select: { percent: true, updatedAt: true } } },
+          select: { id: true, title: true, slug: true, published: true, user: { select: { name: true, image: true } }, progress: { select: { percent: true, updatedAt: true } } },
         });
         // Attach topics
         const ids = items.map((i: any) => i.id);
@@ -42,7 +42,17 @@ export default async function DashboardHomePage() {
         for (const r of topicRows) {
           (byRoadmap[r.roadmapId] ||= []).push({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary });
         }
-        return items.map((i: any) => ({ ...i, topics: (byRoadmap[i.id] || []).slice(0, 5) }));
+        // Attach rating aggregates for published roadmaps (and keep 0 for unpublished)
+        const aggRows = ids.length ? await (prisma as any).roadmapAggregates.findMany({ where: { roadmapId: { in: ids } } }) : [];
+        const aggById: Record<string, { avgStars?: number; ratingsCount?: number }> = Object.fromEntries(
+          aggRows.map((a: any) => [a.roadmapId, { avgStars: a.avgStars ?? 0, ratingsCount: a.ratingsCount ?? 0 }])
+        );
+        return items.map((i: any) => ({
+          ...i,
+          topics: (byRoadmap[i.id] || []).slice(0, 5),
+          avgStars: aggById[i.id]?.avgStars ?? 0,
+          ratingsCount: aggById[i.id]?.ratingsCount ?? 0,
+        }));
       } catch {
         return [];
       }
@@ -136,19 +146,19 @@ export default async function DashboardHomePage() {
         </div>
       </div>
 
-  <div className="max-w-6xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 px-4 sm:px-6 py-6">
+  <div className="w-full grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 px-4 sm:px-6 py-6">
         {/* Main feed */}
         <div>
           {/* In-Progress horizontal scroller */}
           {Array.isArray(inProgress) && inProgress.length > 0 ? (
             <div className="mt-2">
               <h3 className="text-sm font-semibold text-slate-900">Sedang Dipelajari</h3>
-      <div className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
+      <div className="overflow-x-auto overscroll-x-contain">
                 <div className="mt-3 flex gap-3 snap-x snap-mandatory pb-2">
                   {inProgress.map((i: any) => (
-                    <div key={i.id} className="min-w-[260px] max-w-[320px] snap-start">
-                      <div className="">
-                        <RoadmapCard item={i} />
+                    <div key={i.id} className="w-[300px] shrink-0 snap-start">
+                      <div>
+                        <RoadmapCard item={i} hideInlineTopics hideRatings={!i.published} own compact forcePrivateLink />
                         <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
                           <div className="h-full bg-blue-600" style={{ width: `${Math.max(0, Math.min(100, i?.progress?.percent ?? 0))}%` }} />
                         </div>
@@ -164,8 +174,8 @@ export default async function DashboardHomePage() {
           <DashboardTabs forYou={forYou} popular={popular} />
         </div>
 
-        {/* Sidebar */}
-        <aside>
+  {/* Right column */}
+  <aside className="sticky top-6 self-start">
           <div className="rounded-2xl border border-slate-200 p-5">
             <h3 className="text-sm font-semibold text-slate-900">Recommended Topics</h3>
             <div className="mt-3 flex flex-wrap gap-2">

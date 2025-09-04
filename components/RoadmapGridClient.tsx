@@ -50,30 +50,31 @@ export default function RoadmapGridClient({ items }: { items: RoadmapItem[] }) {
       {items.map((r) => {
   const gated = !isReady(r.id) || isGenerating(r);
         const updated = new Date(r.updatedAt);
+        const primaryTopic = Array.isArray(r.topics) && r.topics.length
+          ? (r.topics.find(t => t.isPrimary) || r.topics[0])
+          : null;
         return (
-          <div key={r.id} className={`block rounded-2xl border border-slate-200 hover:border-blue-300 transition-all bg-white p-4 dark:bg-[#0b0b0b]`}>
+          <Link href={`/dashboard/roadmaps/${r.id}?from=roadmaps`} key={r.id} className={`relative block rounded-2xl border border-slate-200 hover:border-blue-300 transition-all bg-white p-4 pb-14 dark:bg-[#0b0b0b]`}>
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-[15px] sm:text-base font-semibold text-slate-900 truncate dark:text-slate-100">{r.title}</h3>
               {gated ? (
                 <div className="flex items-center gap-2 text-xs text-slate-500"><span className="inline-block h-2 w-2 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" /> Menyiapkan materi…</div>
               ) : null}
             </div>
-            {Array.isArray(r.topics) && r.topics.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {r.topics.slice(0, 3).map((t) => (
-                  <span
-                    key={`${r.id}:${t.slug}`}
-                    className={`px-2 py-0.5 text-[11px] rounded-full border ${t.isPrimary ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-600'}`}
-                    title={t.isPrimary ? 'Topik Utama' : 'Topik'}
-                  >
-                    {t.name}
-                  </span>
-                ))}
-              </div>
-            ) : null}
+            {/* Inline topic chips removed; bottom-right chip is shown instead */}
             <div className="text-sm text-slate-500 mt-2 dark:text-slate-400">Diperbarui {updated.toLocaleString('id-ID')}</div>
-            <Link href={`/dashboard/roadmaps/${r.id}?from=roadmaps`} className="mt-4 inline-block rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200">Buka</Link>
-          </div>
+            {/* Bottom bar: only topic chip on the right; entire card is clickable */}
+            <div className="absolute inset-x-4 bottom-3 flex items-center justify-end pointer-events-none">
+              {primaryTopic ? (
+                <span
+                  className={`px-2 py-0.5 text-[11px] rounded-full border ${primaryTopic.isPrimary ? 'bg-blue-50/90 border-blue-300 text-blue-700' : 'bg-slate-50/90 border-slate-200 text-slate-600'}`}
+                  title={primaryTopic.isPrimary ? 'Topik Utama' : 'Topik'}
+                >
+                  {primaryTopic.name}
+                </span>
+              ) : null}
+            </div>
+          </Link>
         );
       })}
     </div>
