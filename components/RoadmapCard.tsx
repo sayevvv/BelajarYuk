@@ -22,6 +22,7 @@ export default function RoadmapCard({
   showBottomChip = true,
   forcePrivateLink = false,
   reserveLeftAction = false,
+  bottomMetaAlign = false,
   hrefOverride,
 }: {
   item: Item;
@@ -32,6 +33,7 @@ export default function RoadmapCard({
   showBottomChip?: boolean;
   forcePrivateLink?: boolean;
   reserveLeftAction?: boolean;
+  bottomMetaAlign?: boolean;
   hrefOverride?: string;
 }) {
   const stars = Math.max(0, Math.min(5, item.avgStars ?? 0));
@@ -46,7 +48,13 @@ export default function RoadmapCard({
     ? (item.topics.find(t => t.isPrimary) || item.topics[0])
     : null;
   const showChip = showBottomChip && !!primaryTopic;
-  let containerPad = showChip ? (compact ? 'pb-10' : 'pb-14') : 'pb-4';
+  let containerPad = 'pb-4';
+  if (bottomMetaAlign) {
+    // Reserve space for the bottom meta bar even if there is no chip
+    containerPad = compact ? 'pb-10' : 'pb-14';
+  } else if (showChip) {
+    containerPad = compact ? 'pb-10' : 'pb-14';
+  }
   if (reserveLeftAction) {
     containerPad = compact ? 'pb-12' : 'pb-16';
   }
@@ -72,7 +80,7 @@ export default function RoadmapCard({
               <span className="truncate">oleh {authorName}</span>
             </div>
           ) : null}
-          {!hideInlineTopics && Array.isArray(item.topics) && item.topics.length > 0 ? (
+          {!hideInlineTopics && !bottomMetaAlign && Array.isArray(item.topics) && item.topics.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-2">
               {item.topics.slice(0, 3).map((t) => (
                 <span
@@ -90,29 +98,47 @@ export default function RoadmapCard({
           <span className="ml-3 inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-[11px] px-2 py-0.5 border border-emerald-200">Dev’s Choice</span>
         ) : null}
       </div>
-  <div className={`mt-3 flex items-center gap-4 text-sm text-slate-600${compact ? ' min-h-[20px]' : ''}`}>
-        {weeks !== null ? (
-          <span className="inline-flex items-center gap-1">
-            <CalendarIcon className="h-4 w-4" />
-            {weeks} minggu
-          </span>
-        ) : null}
-        {!hideRatings && (
-          <span className="inline-flex items-center gap-1">
-            <span className="text-yellow-500" aria-hidden>★</span>
-            {displayStars}{item.ratingsCount ? <span className="text-slate-400">&nbsp;({item.ratingsCount})</span> : null}
-          </span>
-        )}
-      </div>
-      {/* Bottom bar: only topic chip on the right; entire card is clickable */}
-  {showChip && (
-        <div className="absolute inset-x-4 bottom-3 flex items-center justify-end pointer-events-none">
-          <span
-            className={`px-2 py-0.5 text-[11px] rounded-full border ${primaryTopic?.isPrimary ? 'bg-blue-50/90 border-blue-300 text-blue-700' : 'bg-slate-50/90 border-slate-200 text-slate-600'}`}
-    title={primaryTopic?.isPrimary ? 'Topik Utama' : 'Topik'}
-          >
-    {primaryTopic?.name}
-          </span>
+      {/* Middle meta row (weeks + ratings) unless we align at bottom */}
+      {!bottomMetaAlign && (
+        <div className={`mt-3 flex items-center gap-4 text-sm text-slate-600${compact ? ' min-h-[20px]' : ''}`}>
+          {weeks !== null ? (
+            <span className="inline-flex items-center gap-1">
+              <CalendarIcon className="h-4 w-4" />
+              {weeks} minggu
+            </span>
+          ) : null}
+          {!hideRatings && (
+            <span className="inline-flex items-center gap-1">
+              <span className="text-yellow-500" aria-hidden>★</span>
+              {displayStars}{item.ratingsCount ? <span className="text-slate-400">&nbsp;({item.ratingsCount})</span> : null}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Bottom meta bar: align ratings (left) and primary topic chip (right) */}
+      {bottomMetaAlign && (
+        <div className="absolute inset-x-4 bottom-3 flex items-center justify-between text-sm text-slate-600 pointer-events-none">
+          {/* left: ratings (or placeholder to keep alignment) */}
+          <div className={`min-h-[20px] ${compact ? '' : ''}`}>
+            {!hideRatings ? (
+              <span className="inline-flex items-center gap-1">
+                <span className="text-yellow-500" aria-hidden>★</span>
+                {displayStars}{item.ratingsCount ? <span className="text-slate-400">&nbsp;({item.ratingsCount})</span> : null}
+              </span>
+            ) : (
+              <span className="inline-block" style={{ width: 0, height: 20 }} />
+            )}
+          </div>
+          {/* right: primary topic chip */}
+          {showChip ? (
+            <span
+              className={`px-2 py-0.5 text-[11px] rounded-full border ${primaryTopic?.isPrimary ? 'bg-blue-50/90 border-blue-300 text-blue-700' : 'bg-slate-50/90 border-slate-200 text-slate-600'}`}
+              title={primaryTopic?.isPrimary ? 'Topik Utama' : 'Topik'}
+            >
+              {primaryTopic?.name}
+            </span>
+          ) : <span />}
         </div>
       )}
     </Link>

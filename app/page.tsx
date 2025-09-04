@@ -1,7 +1,7 @@
 // app/page.tsx (Swiss Design Landing Page)
 import Link from 'next/link';
 import Image from 'next/image';
-import { Grid3X3, BookOpen, BarChart3, Users } from 'lucide-react';
+import { Grid3X3, BookOpen, BarChart3, Users, Target, Clock3, Share2, Shield, Sparkles, CheckCircle } from 'lucide-react';
 import { Space_Mono } from 'next/font/google';
 // import { prisma } from '@/lib/prisma';
 import LandingHeader from '@/components/LandingHeader';
@@ -20,7 +20,7 @@ const spaceMono = Space_Mono({
 // Metric display component following Swiss design principles
 const MetricCard = ({ number, label, delay = 0 }: { number: string; label: string; delay?: number }) => (
   <div className={`${spaceMono.variable}`} style={{ animationDelay: `${delay}ms` }}>
-  <div className="border-l-2 border-slate-300 dark:border-slate-500 pl-6">
+    <div className="border-l-2 border-slate-300 dark:border-slate-500 pl-6">
       <div className="font-mono text-3xl font-bold text-slate-500 tracking-tight dark:text-slate-700">{number}</div>
       <div className="text-sm uppercase tracking-wide text-slate-500 mt-1 dark:text-slate-700">{label}</div>
     </div>
@@ -32,8 +32,8 @@ const FeatureBlock = ({ icon: Icon, title, description, number }: { icon: React.
   <div className="group">
     <div className="flex items-start gap-4">
       <div className="flex-shrink-0">
-  {/* Brand accent: blue background for feature icons */}
-  <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#4B85B8] text-white">
+        {/* Brand accent: blue background for feature icons */}
+        <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#4B85B8] text-white">
           <Icon className="h-6 w-6" />
         </div>
       </div>
@@ -43,6 +43,21 @@ const FeatureBlock = ({ icon: Icon, title, description, number }: { icon: React.
         </div>
         <h3 className="text-xl font-bold text-slate-900 mb-3 dark:text-slate-100">{title}</h3>
         <p className="text-slate-600 leading-relaxed dark:text-slate-300">{description}</p>
+      </div>
+    </div>
+  </div>
+);
+
+// Small value-prop card used in About section
+const AboutCard = ({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) => (
+  <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
+    <div className="flex items-start gap-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#4B85B8]/10 text-[#4B85B8] dark:bg-white/5 dark:text-[#FCA142]">
+        {icon}
+      </div>
+      <div>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+        <p className="mt-1 text-sm text-slate-600 dark:text-neutral-300 leading-relaxed">{desc}</p>
       </div>
     </div>
   </div>
@@ -97,17 +112,23 @@ export default async function LandingPage() {
   ];
 
   return (
-  <div className={`min-h-screen light:bg-white dark:bg-black ${spaceMono.variable}`}>
+    <div className={`min-h-screen light:bg-white dark:bg-black ${spaceMono.variable}`}>
       <LandingHeader />
 
       <main className="pt-16">
         {/* Hero Section */}
-  <section className="relative overflow-hidden light:bg-white dark:bg-black">
+        <section className="relative overflow-hidden light:bg-white dark:bg-black">
           <MacbookScroll
             title={
               <span className="text-slate-900 dark:text-white">
-                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">Belajar Lebih Lanjut,</span>
-                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">Lebih Jauh</span>
+                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">
+                  Belajar Lebih{' '}
+                  <span className="inline-block bg-gradient-to-r from-[#4B85B8] to-[#FCA142] bg-clip-text text-transparent">Lanjut</span>,
+                </span>
+                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">
+                  Lebih{' '}
+                  <span className="inline-block bg-gradient-to-r from-[#4B85B8] to-[#FCA142] bg-clip-text text-transparent">Jauh</span>
+                </span>
                 <span className="block mt-3 text-sm sm:text-base font-normal tracking-wide text-slate-600 dark:text-slate-300">Bentuk Rencana Belajarmu Sendiri.</span>
               </span>
             }
@@ -129,8 +150,8 @@ export default async function LandingPage() {
           />
         </section>
 
-    {/* Marquee */}
-  <section aria-label="Roadmap Terbit" className="border-y border-slate-200 dark:border-[#1f1f1f] bg-white dark:bg-black">
+        {/* Marquee */}
+        <section aria-label="Roadmap Terbit" className="border-y border-slate-200 dark:border-[#1f1f1f] bg-white dark:bg-black">
           <div className="max-w-7xl mx-auto px-0 sm:px-6">
             <div className="group pause-on-hover relative overflow-hidden py-4">
               <div className="pointer-events-none absolute left-0 top-0 h-full w-16 bg-gradient-to-r light:from-white to-transparent dark:from-black" />
@@ -174,7 +195,7 @@ export default async function LandingPage() {
         </section>
 
         {/* Metrics */}
-  <section id="metrics" className="py-16 bg-orange-50 dark:!bg-[#0b0b0b] transition-colors">
+        <section id="metrics" className="py-16 bg-orange-50 dark:!bg-[#0b0b0b] transition-colors">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               <MetricCard number="XX+" label="Pengguna Aktif" delay={0} />
@@ -185,7 +206,7 @@ export default async function LandingPage() {
         </section>
 
         {/* Features */}
-    <section id="features" className="py-24 sm:py-32 scroll-mt-28">
+        <section id="features" className="py-24 sm:py-32 scroll-mt-28">
           <div className="max-w-7xl mx-auto px-6">
             <div className="mb-16">
               <p className={`text-xs uppercase tracking-wider text-slate-500 mb-3 font-mono dark:text-neutral-400`}>Fitur Unggulan</p>
@@ -227,58 +248,72 @@ export default async function LandingPage() {
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
                 <h3 className="font-semibold text-slate-900 dark:text-slate-100">Kejelasan</h3>
-                  <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Targetnya jelas, penjelasannya mudah dimengerti, dan tugasnya spesifik agar Anda betah belajar.</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Targetnya jelas, penjelasannya mudah dimengerti, dan tugasnya spesifik agar Anda betah belajar.</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
                 <h3 className="font-semibold text-slate-900 dark:text-slate-100">Berbasis bukti</h3>
-                  <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Latihan soal dan evaluasi diri membantu kemampuan benar-benar melekat, bukan hanya menyelesaikan daftar.</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Latihan soal dan evaluasi diri membantu kemampuan benar-benar melekat, bukan hanya menyelesaikan daftar.</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
                 <h3 className="font-semibold text-slate-900 dark:text-slate-100">Publikasi dan Riwayat</h3>
-                  <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Anda bisa mengekspor roadmap dan riwayat kapan pun. Data belajar sepenuhnya milik Anda.</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Anda bisa mengekspor roadmap dan riwayat kapan pun. Data belajar sepenuhnya milik Anda.</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* About */}
-        <section id="about" className="py-32 sm:py-40 border-t border-slate-200 dark:border-[#1f1f1f] scroll-mt-28">
-          <div className="max-w-7xl mx-auto px-6 py-16 lg:py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-            <div>
+        {/* About (redesigned) */}
+        <section id="about" className="py-24 sm:py-32 border-t border-slate-200 dark:border-[#1f1f1f] scroll-mt-28">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="mb-12 sm:mb-16">
               <p className={`text-xs uppercase tracking-wider text-slate-500 mb-3 font-mono dark:text-slate-400`}>Tentang NextStep</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-neutral-100">Mengapa kami membangun NextStep</h2>
-              <p className="mt-5 text-slate-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
-                NextStep adalah platform pembelajaran mandiri berbasis mobile dan web yang dirancang untuk memberikan pengalaman belajar personal, adaptif, dan relevan dengan tuntutan dunia kerja di era digital.
-              </p>
-              <p className="mt-4 text-slate-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
-                Platform ini memanfaatkan AI untuk membangun roadmap belajar yang dapat disesuaikan, menata waktu belajar sesuai jadwal, serta menyusun tujuan pembelajaran yang terintegrasi dengan materi dan praktik—membantu pengguna belajar efisien dan fokus.
-              </p>
-              <p className="mt-4 text-slate-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
-                NextStep juga memungkinkan pengguna membagikan roadmap belajar kepada komunitas. Roadmap yang dipublikasikan dapat diadopsi, disesuaikan, atau dimodifikasi, sehingga proses belajar menjadi kolaboratif dan menginspirasi.
-              </p>
-              <p className="mt-4 text-slate-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
-                NextStep melayani berbagai profil: pemuda yang memasuki dunia kerja hingga profesional yang ingin upskilling/reskilling—semua dapat merancang roadmap personal sesuai tujuan, durasi, dan praktik spesifik.
+              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight max-w-4xl dark:text-neutral-100">
+                Belajar yang terarah, adaptif, dan berfokus hasil
+              </h2>
+              <p className="mt-4 text-slate-600 dark:text-neutral-300 max-w-2xl">
+                Kami merancang NextStep agar Anda bisa membuat rencana belajar yang jelas, fleksibel, dan konsisten—tanpa kehilangan fokus pada hasil yang ingin dicapai.
               </p>
             </div>
-            <div>
-              <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Pilar NextStep</h3>
-                <ul className="mt-3 space-y-2 text-sm text-slate-700 dark:text-neutral-300 list-disc pl-5">
-                  <li>Personalisasi AI — roadmap disusun sesuai tujuan, waktu, dan level Anda.</li>
-                  <li>Jadwal adaptif — sinkron dengan kalender; sesi singkat dan konsisten.</li>
-                  <li>Tujuan terukur — setiap modul punya output dan kriteria selesai.</li>
-                  <li>Kolaborasi komunitas — bagikan, fork, dan sesuaikan roadmap bersama.</li>
+
+            {/* Value props */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              <AboutCard icon={<Sparkles className="h-5 w-5" />} title="Personalisasi AI" desc="Roadmap dibuat otomatis sesuai tujuan, waktu tersedia, dan tingkat kemampuan Anda." />
+              <AboutCard icon={<Clock3 className="h-5 w-5" />} title="Jadwal Adaptif" desc="Sinkron dengan ritme harian Anda—sesi singkat namun konsisten untuk kemajuan nyata." />
+              <AboutCard icon={<Target className="h-5 w-5" />} title="Fokus Hasil" desc="Setiap bagian punya output dan kriteria selesai sehingga progres terasa konkret." />
+              <AboutCard icon={<Share2 className="h-5 w-5" />} title="Kolaboratif" desc="Publikasikan, fork, dan sesuaikan roadmap bersama komunitas." />
+            </div>
+
+            {/* Principles + Privacy */}
+            <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Prinsip NextStep</h3>
+                <ul className="mt-4 space-y-3 text-sm text-slate-700 dark:text-neutral-300">
+                  <li className="flex items-start gap-3"><CheckCircle className="mt-0.5 h-4 w-4 text-[#4B85B8]" /><span>Jelas dan terukur — tujuan, output, dan alur belajar tidak ambigu.</span></li>
+                  <li className="flex items-start gap-3"><CheckCircle className="mt-0.5 h-4 w-4 text-[#4B85B8]" /><span>Ringkas namun padat — materi inti didahulukan, praktik memandu penguasaan.</span></li>
+                  <li className="flex items-start gap-3"><CheckCircle className="mt-0.5 h-4 w-4 text-[#4B85B8]" /><span>Fleksibel — mudah menyesuaikan waktu, prioritas, dan tingkat kedalaman.</span></li>
                 </ul>
                 <div className="mt-6 rounded-lg bg-slate-50 p-4 text-slate-700 dark:bg-[#111] dark:text-neutral-200">
-                  Praktik: Jadwalkan 25–50 menit per sesi, tandai bagian yang sulit, lalu perbarui prioritas di akhir pekan.
+                  Rekomendasi: alokasikan 25–50 menit per sesi, tandai bagian sulit, dan evaluasi fokus setiap akhir pekan.
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#4B85B8] text-white"><Shield className="h-5 w-5" /></div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Keamanan & Privasi</h3>
+                    <p className="mt-2 text-sm text-slate-700 dark:text-neutral-300">Data belajar Anda tetap milik Anda. Kami menerapkan praktik terbaik untuk perlindungan data dan kontrol publikasi.</p>
+                  </div>
+                </div>
+                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600 dark:border-white/10 dark:bg-[#111] dark:text-neutral-300">
+                  Tip: Anda bisa menyimpan roadmap sebagai privat, mengontrol topik publikasi, dan menghapus data kapan saja.
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Process */}
-  <section id='metrics' className="py-24 bg-slate-400 dark:!bg-[#0b0b0b] transition-colors text-white">
+  {/* Process */}
+  <section id='process' className="py-24 bg-orange-600 dark:bg-orange-700 transition-colors text-white">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               <div>
@@ -350,7 +385,7 @@ export default async function LandingPage() {
           </div>
         </section>
 
-  {/* Team */}
+        {/* Team */}
         <section id="team" className="py-24 sm:py-32">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto mb-12">
@@ -385,8 +420,8 @@ export default async function LandingPage() {
           </div>
         </section>
 
-  {/* CTA */}
-  <section className="py-24 sm:py-32">
+        {/* CTA */}
+        <section className="py-24 sm:py-32">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto">
               <div className={`text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-6 font-mono`}>
@@ -396,10 +431,10 @@ export default async function LandingPage() {
                 Melangkah Bersama Kami!
               </h2>
               <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed mb-12">
-    Mulai langkah baru dengan NextStep—rancang roadmap personal dan capai tujuan belajar Anda.
+                Mulai langkah baru dengan NextStep—rancang roadmap personal dan capai tujuan belajar Anda.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-    <StartLearningCTA className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#4B85B8] px-12 py-4 text-white font-medium hover:opacity-85 transition-colors" />
+                <StartLearningCTA className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#4B85B8] px-12 py-4 text-white font-medium hover:opacity-85 transition-colors" />
               </div>
             </div>
           </div>
@@ -407,7 +442,7 @@ export default async function LandingPage() {
       </main>
 
       {/* Footer */}
-  <footer className="bg-slate-50 dark:bg-black border-t border-slate-200 dark:border-[#1f1f1f]">
+      <footer className="bg-slate-50 dark:bg-black border-t border-slate-200 dark:border-[#1f1f1f]">
         <div className="max-w-7xl mx-auto px-6 py-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             <div className="lg:col-span-6">

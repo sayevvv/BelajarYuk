@@ -7,7 +7,6 @@ import ThemeToggle from './ui/ThemeToggle';
 export default function LandingHeader() {
   const [dest, setDest] = useState<string>('/login?callbackUrl=%2Fdashboard%2Fnew');
   const [isDark, setIsDark] = useState<boolean>(false);
-  const [scrolled, setScrolled] = useState<boolean>(false);
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const moRef = useRef<MutationObserver | null>(null);
 
@@ -30,14 +29,8 @@ export default function LandingHeader() {
     mo.observe(el, { attributes: true, attributeFilter: ['class'] });
     moRef.current = mo;
 
-    // track scroll for logo scale
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-
     return () => {
       mounted = false;
-      window.removeEventListener('scroll', onScroll);
       moRef.current?.disconnect();
       moRef.current = null;
     };
@@ -57,18 +50,13 @@ export default function LandingHeader() {
         >
           {/* Logo */}
           <Link href="/" className="pl-4 pr-2 flex items-center overflow-visible select-none">
-            <div
-              className={[
-                'origin-left transition-transform duration-300 ease-out',
-                scrolled ? 'scale-40 md:scale-55' : 'scale-90 md:scale-100 -my-1'
-              ].join(' ')}
-            >
+            <div className="origin-left -my-1">
               <Image
-                key={isDark ? 'light' : 'dark'}
                 src={isDark ? '/logo/light.png' : '/logo/dark.png'}
                 alt="NextStep"
                 width={120}
                 height={24}
+                className="h-6 w-auto"
                 priority
               />
             </div>

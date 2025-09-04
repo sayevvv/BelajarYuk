@@ -72,11 +72,11 @@ export default async function RoadmapIndexPage({ searchParams }: { searchParams:
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-black">
-      <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
+  <header className="p-6 sm:p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Roadmap Saya</h1>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 truncate">Kelola roadmap yang kamu buat dan salinan dari publik. Klik kartu untuk membuka, gunakan sortir di kanan.</p>
+    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100">Roadmap Saya</h1>
+    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 truncate hidden sm:block">Kelola roadmap yang kamu buat dan salinan dari publik. Klik kartu untuk membuka, gunakan sortir di kanan.</p>
           </div>
           <RoadmapSortSelect current={typeof sp?.sort === 'string' ? (sp?.sort as string) : 'updated_desc'} />
         </div>

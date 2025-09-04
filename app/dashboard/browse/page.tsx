@@ -45,9 +45,9 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-slate-900">
-      <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-10">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Jelajahi Roadmap</h1>
-        <p className="mt-1 text-slate-500 dark:text-slate-400">Koleksi roadmap yang dipublikasikan pengguna.</p>
+      <header className="p-6 sm:p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-10">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100">Jelajahi Roadmap</h1>
+        <p className="mt-1 text-slate-500 dark:text-slate-400 hidden sm:block">Koleksi roadmap yang dipublikasikan pengguna.</p>
         <form action="" className="mt-4 flex items-center gap-3">
           <input name="q" defaultValue={q} placeholder="Cari roadmap…" className="w-full max-w-md px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400" />
           <select name="sort" defaultValue={sort} className="px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">

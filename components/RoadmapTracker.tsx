@@ -276,7 +276,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   return (
     <div className="h-full overflow-hidden bg-white dark:bg-black flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between gap-4 p-6 border-b border-slate-200 dark:border-[#1f1f1f] sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
+  <header className="flex items-center justify-between gap-4 p-4 sm:p-6 border-b border-slate-200 dark:border-[#1f1f1f] sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
@@ -288,8 +288,8 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0">
-            <div className="text-[11px] uppercase tracking-wider text-slate-500">Rencana Belajar</div>
-            <h1 className="text-2xl font-bold text-slate-900 truncate">{roadmap.title}</h1>
+            <div className="text-[11px] uppercase tracking-wider text-slate-500 hidden sm:block">Rencana Belajar</div>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 truncate">{roadmap.title}</h1>
             {Boolean((roadmap as any).sourceId) && (
               <div className="mt-1 flex items-center gap-2">
                 {(roadmap as any).source?.user?.name ? (

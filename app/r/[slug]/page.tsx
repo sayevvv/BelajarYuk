@@ -41,13 +41,13 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="min-w-0">
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
                 <span className="truncate">{(roadmap as any).title}</span>
                 {(roadmap as any).verified ? (
                   <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 border border-emerald-200">Dev’s Choice</span>
                 ) : null}
               </h1>
-              <div className="mt-1 text-slate-500 dark:text-slate-400">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
+              <div className="mt-1 text-slate-500 dark:text-slate-400 hidden sm:block">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
             </div>
           </div>
           <div className="mt-1 flex items-center gap-4">

@@ -3,7 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth.config';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
 import RoadmapCard from '@/components/RoadmapCard';
+import InProgressScroller from '@/components/InProgressScroller';
 import DeveloperChoiceSidebar from '../../components/DeveloperChoiceSidebar';
 import DashboardTabs from '@/components/DashboardTabs';
 
@@ -147,24 +149,7 @@ export default async function DashboardHomePage() {
         <div>
           {/* In-Progress horizontal scroller */}
           {Array.isArray(inProgress) && inProgress.length > 0 ? (
-            <div className="mt-2">
-              <h3 className="text-sm font-semibold text-slate-900">Sedang Dipelajari</h3>
-      <div className="overflow-x-auto overscroll-x-contain">
-                <div className="mt-3 flex gap-3 snap-x snap-mandatory pb-2">
-                  {inProgress.map((i: any) => (
-                    <div key={i.id} className="w-[300px] shrink-0 snap-start">
-                      <div>
-                        <RoadmapCard item={i} hideInlineTopics hideRatings={!i.published} own compact forcePrivateLink />
-                        <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
-                          <div className="h-full bg-blue-600" style={{ width: `${Math.max(0, Math.min(100, i?.progress?.percent ?? 0))}%` }} />
-                        </div>
-                        <div className="mt-1 text-[11px] text-slate-500">{Math.max(0, Math.min(100, i?.progress?.percent ?? 0))}% selesai</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <InProgressScroller items={inProgress as any} />
           ) : null}
 
           <DashboardTabs forYou={forYou} popular={popular} />

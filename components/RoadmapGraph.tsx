@@ -67,8 +67,8 @@ const MilestoneNode = memo(({ data, selected }: NodeProps<MilestoneNodeData>) =>
       <Handle type="target" id="right-target" position={Position.Right} isConnectable={true} style={{ opacity: 0 }} />
       
       <div className="flex-grow">
-  <div className="text-xs font-bold tracking-wider text-blue-600">{milestone.timeframe.toUpperCase()}</div>
-  <div className="mt-1 text-base font-semibold text-slate-800 dark:text-neutral-100">{milestone.topic}</div>
+  <div className="text-xs font-bold tracking-wider text-blue-600">{String(milestone.timeframe || `Tahap ${index + 1}`).toUpperCase()}</div>
+  <div className="mt-1 text-base font-semibold text-slate-800 dark:text-neutral-100">{milestone.topic || 'Materi'}</div>
         {/* Duration badge and date details */}
         {(durationDays || computedDates || (promptMode === 'advanced' && (milestone.estimated_dates || milestone.daily_duration))) && (
           <div className="mt-2 space-y-1">
@@ -225,11 +225,12 @@ export default function RoadmapGraph({ data, onNodeClick, promptMode, startDate,
   // saat data roadmap baru diterima dari prop.
   useEffect(() => {
     // Only (re)generate graph when data content or mode changes
-    const key = `${promptMode}::${JSON.stringify(data.milestones)}`;
+    const milestones = Array.isArray(data?.milestones) ? data.milestones : [];
+    const key = `${promptMode}::${JSON.stringify(milestones)}`;
     if (sourceKeyRef.current === key) return;
     sourceKeyRef.current = key;
     const { initialNodes, initialEdges } = generateFlowElements(
-      data.milestones,
+      milestones,
       onNodeClick,
       promptMode,
       startDate,
@@ -238,7 +239,7 @@ export default function RoadmapGraph({ data, onNodeClick, promptMode, startDate,
     setNodes(initialNodes);
     setEdges(initialEdges);
     needsLayoutRef.current = true;
-  }, [data.milestones, promptMode, onNodeClick, startDate]);
+  }, [data?.milestones, promptMode, onNodeClick, startDate]);
 
   // Keep callbacks fresh without rebuilding positions
   useEffect(() => {
@@ -299,6 +300,15 @@ export default function RoadmapGraph({ data, onNodeClick, promptMode, startDate,
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     [setEdges]
   );
+
+  // Empty state when no milestones
+  if (!Array.isArray(data?.milestones) || data.milestones.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center text-slate-500">
+        Roadmap kosong. Coba buat ulang atau cek hasil generate.
+      </div>
+    );
+  }
 
   return (
   <div style={{ height: '100%' }} ref={containerRef}>
