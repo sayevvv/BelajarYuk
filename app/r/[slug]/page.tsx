@@ -3,6 +3,7 @@ import SaveRoadmapButton from '@/components/SaveRoadmapButton';
 import PublicRoadmapClient from '@/components/PublicRoadmapClient';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import VerifyRoadmapButton from '@/components/VerifyRoadmapButton';
 import RatingSummary from '@/components/RatingSummary';
 import TopicChips from '@/components/TopicChips';
 import { Suspense } from 'react';
@@ -30,6 +31,7 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
   if (!roadmap) return <div className="p-8">Tidak ditemukan.</div>;
   const content = (roadmap as any).content as any;
   const session = (await getServerSession(authOptions as any)) as any;
+  const isAdmin = (session as any)?.user?.role === 'ADMIN';
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-black">
       <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
@@ -39,7 +41,12 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="min-w-0">
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">{(roadmap as any).title}</h1>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
+                <span className="truncate">{(roadmap as any).title}</span>
+                {(roadmap as any).verified ? (
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 border border-emerald-200">Dev’s Choice</span>
+                ) : null}
+              </h1>
               <div className="mt-1 text-slate-500 dark:text-slate-400">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
             </div>
           </div>
@@ -48,6 +55,9 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
             <RatingSummary roadmapId={(roadmap as any).id} canRate={(roadmap as any).published && (roadmap as any).user?.id !== (session as any)?.user?.id} />
             {(roadmap as any).published && (roadmap as any).user?.id !== (session as any)?.user?.id ? (
               <SaveRoadmapButton roadmapId={(roadmap as any).id} />
+            ) : null}
+            {isAdmin ? (
+              <VerifyRoadmapButton roadmapId={(roadmap as any).id} verified={(roadmap as any).verified} />
             ) : null}
           </div>
         </div>

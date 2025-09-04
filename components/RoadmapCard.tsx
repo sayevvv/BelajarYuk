@@ -21,6 +21,8 @@ export default function RoadmapCard({
   own = false,
   showBottomChip = true,
   forcePrivateLink = false,
+  reserveLeftAction = false,
+  hrefOverride,
 }: {
   item: Item;
   hideInlineTopics?: boolean;
@@ -29,20 +31,25 @@ export default function RoadmapCard({
   own?: boolean;
   showBottomChip?: boolean;
   forcePrivateLink?: boolean;
+  reserveLeftAction?: boolean;
+  hrefOverride?: string;
 }) {
   const stars = Math.max(0, Math.min(5, item.avgStars ?? 0));
   const displayStars = stars.toFixed(2).replace(/\.00$/, '.0');
   const weeks = item.durationWeeks ?? null;
-  const href = forcePrivateLink
+  const href = hrefOverride || (forcePrivateLink
     ? `/dashboard/roadmaps/${item.id}`
-    : (item.slug ? `/r/${item.slug}` : `/dashboard/roadmaps/${item.id}`);
+    : (item.slug ? `/r/${item.slug}` : `/dashboard/roadmaps/${item.id}`));
   const authorName = item.user?.name ?? null;
   const authorImage = item.user?.image ?? null;
   const primaryTopic = Array.isArray(item.topics) && item.topics.length
     ? (item.topics.find(t => t.isPrimary) || item.topics[0])
     : null;
   const showChip = showBottomChip && !!primaryTopic;
-  const containerPad = showChip ? (compact ? 'pb-10' : 'pb-14') : 'pb-4';
+  let containerPad = showChip ? (compact ? 'pb-10' : 'pb-14') : 'pb-4';
+  if (reserveLeftAction) {
+    containerPad = compact ? 'pb-12' : 'pb-16';
+  }
   return (
     <Link href={href} className={`relative block rounded-2xl border border-slate-200 hover:border-blue-300 transition-all bg-white dark:bg-[#0b0b0b] p-4 ${containerPad}`}>
       <div className="flex items-start justify-between">
@@ -80,7 +87,7 @@ export default function RoadmapCard({
           ) : null}
         </div>
         {item.verified ? (
-          <span className="ml-3 inline-flex items-center rounded-full bg-blue-50 text-blue-700 text-[11px] px-2 py-0.5 border border-blue-200">Verified</span>
+          <span className="ml-3 inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-[11px] px-2 py-0.5 border border-emerald-200">Dev’s Choice</span>
         ) : null}
       </div>
   <div className={`mt-3 flex items-center gap-4 text-sm text-slate-600${compact ? ' min-h-[20px]' : ''}`}>

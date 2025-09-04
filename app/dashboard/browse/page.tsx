@@ -1,7 +1,6 @@
 // app/dashboard/browse/page.tsx
 import Link from 'next/link';
 import { headers } from 'next/headers';
-import SaveRoadmapButton from '@/components/SaveRoadmapButton';
 import RoadmapCard from '@/components/RoadmapCard';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth.config';
@@ -64,19 +63,14 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
         {data?.items?.map((item: any) => {
           const own = s?.user?.id && s.user.id === item.userId;
       return (
-            <div key={item.id} className="relative">
+            <div key={item.id}>
               <RoadmapCard
                 item={item}
-        hideInlineTopics={false}
-        hideRatings={own}
-        own={!!own}
-        showBottomChip
+                hideInlineTopics={false}
+                hideRatings={own}
+                own={!!own}
+                showBottomChip
               />
-              {!own && (
-                <div className="absolute left-4 bottom-3">
-                  <SaveRoadmapButton roadmapId={item.id} />
-                </div>
-              )}
             </div>
           );
         })}

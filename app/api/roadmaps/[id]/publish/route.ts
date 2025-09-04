@@ -74,7 +74,7 @@ export async function POST(req: NextRequest, ctx: any) {
     } catch {}
     return NextResponse.json(updated);
   } else {
-  const updated = await (prisma as any).roadmap.update({ where: { id: roadmap.id }, data: { published: false, publishedAt: null } });
+  const updated = await (prisma as any).roadmap.update({ where: { id: roadmap.id }, data: { published: false, publishedAt: null, verified: false } });
     try {
       revalidateTag('public-roadmaps');
       if (updated.slug) revalidateTag(`public-roadmap:${updated.slug}`);
