@@ -14,3 +14,14 @@ This repo includes community ratings, saves, and fork counters. After pulling, r
 - pnpm prisma generate
 
 If you use npm or yarn, replace pnpm with your tool. Ensure PRISMA_DATABASE_URL is set.
+
+Environment variables
+
+Add these to .env.local (or .env) as needed:
+
+- PRISMA_DATABASE_URL (and/or DATABASE_URL)
+- GOOGLE_API_KEY  # for Gemini generation
+- GITHUB_TOKEN    # for GitHub Models (used by /api/generate-roadmap-gh)
+- GITHUB_MODELS_ENDPOINT (optional, default: https://models.github.ai/inference)
+
+After updating env, restart the dev server.

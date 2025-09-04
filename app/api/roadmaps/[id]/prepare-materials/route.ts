@@ -25,6 +25,30 @@ export async function POST(_req: NextRequest, ctx: any) {
   const milestones: any[] = Array.isArray(content?.milestones) ? content.milestones : [];
   if (milestones.length === 0) return NextResponse.json({ error: "No milestones" }, { status: 400 });
 
+  // Block regeneration for published roadmaps entirely
+  if ((roadmap as any).published) {
+    return NextResponse.json({ error: 'Roadmap sudah dipublikasikan dan tidak dapat di-generate ulang.' }, { status: 400 });
+  }
+
+  function isMaterialsComplete(content0: any): boolean {
+    try {
+      const ms: any[] = Array.isArray(content0?.milestones) ? content0.milestones : [];
+      const mats: any[][] = Array.isArray(content0?.materialsByMilestone) ? content0.materialsByMilestone : [];
+      if (!ms.length) return false;
+      for (let i = 0; i < ms.length; i++) {
+        const m: any = ms[i] || {};
+        const expected = Array.isArray(m.subbab)
+          ? m.subbab.length
+          : (Array.isArray(m.sub_tasks) ? m.sub_tasks.length : 0);
+        if (expected > 0) {
+          const got = Array.isArray(mats[i]) ? mats[i].length : 0;
+          if (got < expected) return false;
+        }
+      }
+      return true;
+    } catch { return false; }
+  }
+
   // Gate: only one generation per user at a time (stale after 45 minutes)
   const others = await (prisma as any).roadmap.findMany({ where: { userId: session.user.id }, select: { id: true, content: true } });
   const now = Date.now();
@@ -40,8 +64,8 @@ export async function POST(_req: NextRequest, ctx: any) {
     return NextResponse.json({ error: 'Terdapat proses generate materi lain yang masih berjalan. Selesaikan atau tunggu hingga selesai sebelum memulai yang baru.' }, { status: 409 });
   }
 
-  // If already prepared in new format, return unless forcing regeneration
-  if (!force && Array.isArray((content as any).materialsByMilestone)) {
+  // If already prepared and complete, return unless forcing regeneration
+  if (!force && isMaterialsComplete(content)) {
     return NextResponse.json({ ok: true, alreadyPrepared: true });
   }
 

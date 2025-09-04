@@ -23,19 +23,17 @@ export default async function SignupPage() {
         </div>
 
         {/* Left */}
-        <div className="lg:col-span-5 flex flex-col justify-center p-8 pt-24 lg:pt-24 lg:p-16 xl:p-24 overflow-y-auto lg:overflow-hidden">
-          <div className="max-w-md mx-auto lg:mx-0">
-            <div className="mb-16">
-              <div className="mb-8">
-                <div className="text-xs uppercase tracking-wider text-slate-500 mb-4 font-mono">Buat Akun Baru</div>
-                <h1 className="text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-none mb-4">Daftar</h1>
-                <div className="w-16 h-1 bg-slate-900"></div>
+        <div className="lg:col-span-5 flex flex-col justify-center p-8 pt-24 lg:p-16 xl:p-24 overflow-y-auto lg:overflow-hidden">
+          <div className="max-w-md mx-auto w-full">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-[#0b0b0b]">
+              <div className="mb-6">
+                <span className="text-xs font-mono uppercase tracking-wider text-slate-500">Daftar</span>
+                <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-neutral-100">Buat akun baru</h1>
+                <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">Mulai perjalanan belajarmu.</p>
               </div>
-              <p className="text-lg text-slate-600 leading-relaxed font-light text-balance">Mulai perjalanan belajar Anda dengan kurasi roadmap yang relevan.</p>
+              <SignupCard />
+              <p className="mt-6 text-sm text-slate-600">Sudah punya akun? <Link href="/login" className="text-slate-900 underline underline-offset-4">Masuk</Link></p>
             </div>
-
-            <SignupCard />
-            <p className="mt-6 text-sm text-slate-600">Sudah punya akun? <Link href="/login" className="text-slate-900 underline underline-offset-4">Masuk</Link></p>
           </div>
         </div>
 

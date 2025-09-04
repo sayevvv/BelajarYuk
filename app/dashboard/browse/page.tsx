@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import SaveRoadmapButton from '@/components/SaveRoadmapButton';
+import RoadmapCard from '@/components/RoadmapCard';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth.config';
 
@@ -31,9 +32,12 @@ async function getData(params: BrowseParams) {
   return res.json();
 }
 
-export default async function BrowsePage(props: any) {
-  const { searchParams } = props || {};
-  const { q = '', sort = 'newest', page = '1', pageSize = '12' } = (searchParams || {}) as BrowseParams;
+export default async function BrowsePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams;
+  const q = (sp?.q as string) || '';
+  const sort = (sp?.sort as string) || 'newest';
+  const page = (sp?.page as string) || '1';
+  const pageSize = (sp?.pageSize as string) || '12';
   const [data, session] = await Promise.all([
     getData({ q, sort, page, pageSize }),
     getServerSession(authOptions as any),
@@ -57,22 +61,25 @@ export default async function BrowsePage(props: any) {
         </form>
       </header>
       <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {data?.items?.map((item: any) => (
-          <div key={item.id} className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all">
-            <Link href={`/r/${item.slug}`} className="block">
-              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg truncate">{item.title}</h3>
-              <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">oleh {item.user?.name || 'Pengguna'}</div>
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-4 border-t border-slate-200 dark:border-slate-700 pt-4">
-                <strong>Tahapan:</strong> {item.content?.milestones?.length || 0}
-              </p>
-            </Link>
-            {(!s?.user?.id || s.user.id !== item.userId) && (
-              <div className="mt-4">
-                <SaveRoadmapButton roadmapId={item.id} />
-              </div>
-            )}
-          </div>
-        ))}
+        {data?.items?.map((item: any) => {
+          const own = s?.user?.id && s.user.id === item.userId;
+      return (
+            <div key={item.id} className="relative">
+              <RoadmapCard
+                item={item}
+        hideInlineTopics={false}
+        hideRatings={own}
+        own={!!own}
+        showBottomChip
+              />
+              {!own && (
+                <div className="absolute left-4 bottom-3">
+                  <SaveRoadmapButton roadmapId={item.id} />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       {/* Pagination */}
       <div className="px-8 pb-10 flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">

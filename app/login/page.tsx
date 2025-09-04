@@ -43,22 +43,23 @@ export default function LoginPage() {
         </div>
 
         {/* Main Content Area - Left Side */}
-  <div className="lg:col-span-5 flex flex-col justify-center p-6 pt-20 lg:p-10 xl:p-12 overflow-y-auto lg:overflow-hidden min-h-[calc(100vh-4rem)]">
-          <div className="max-w-sm mx-auto">
-            {/* Compact header */}
-            <div className="mb-6">
-              <span className="text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-400">Masuk</span>
-              <h1 className="mt-3 text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 dark:text-neutral-100">Selamat datang kembali</h1>
-              <p className="mt-2 text-sm text-slate-600 dark:text-neutral-400">Masuk untuk melanjutkan belajar.</p>
-            </div>
+        <div className="lg:col-span-5 flex flex-col justify-center p-6 pt-20 lg:p-10 xl:p-12 overflow-y-auto lg:overflow-hidden min-h-[calc(100vh-4rem)]">
+          <div className="max-w-md mx-auto w-full">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-[#0b0b0b]">
+              {/* Simple header */}
+              <div className="mb-6">
+                <span className="text-xs font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-400">Masuk</span>
+                <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-neutral-100">Selamat datang kembali</h1>
+                <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">Masuk untuk melanjutkan belajar.</p>
+              </div>
 
-            {/* Login Form */}
-            <div className="mt-4">
-              {/* Render form normally; session hook will redirect if already logged in */}
-              <LoginCard />
+              {/* Login Form */}
+              <div>
+                <LoginCard />
+              </div>
             </div>
-           </div>
-         </div>
+          </div>
+        </div>
 
         {/* Right Side - Background image with rotating subjects/quotes */}
         <div className="hidden lg:block lg:col-span-7 relative overflow-hidden">

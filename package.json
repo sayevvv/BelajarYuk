@@ -11,6 +11,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@azure-rest/ai-inference": "latest",
+    "@azure/core-auth": "latest",
+    "@azure/core-sse": "latest",
     "@auth/prisma-adapter": "^2.10.0",
     "@headlessui/react": "^2.2.7",
     "@langchain/google-genai": "^0.2.16",

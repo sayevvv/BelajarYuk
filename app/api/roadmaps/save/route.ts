@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth/next"; // Impor getServerSession
 import { authOptions } from "@/auth.config";      // Impor authOptions yang sudah kita buat
 import { prisma } from "@/lib/prisma";
 import crypto from 'crypto';
+import { classifyHeuristic } from '@/lib/topics/classifier';
+import { ensureTopics } from '@/lib/topics/seed';
 import { assertSameOrigin } from "@/lib/security";
 
 export async function POST(req: NextRequest) {
@@ -71,6 +73,35 @@ export async function POST(req: NextRequest) {
       },
       include: { progress: true },
     });
+
+    // Synchronous AI topic classification so chips appear immediately after save
+    try {
+      const titleText = newRoadmap.title || 'Roadmap';
+      const milestones = Array.isArray((newRoadmap as any)?.content?.milestones)
+        ? (newRoadmap as any).content.milestones.map((m: any) => m?.topic).filter(Boolean)
+        : [];
+      const labels = classifyHeuristic({ title: titleText, summary: '', milestones });
+      const slugs = [labels.primary, ...labels.secondary];
+      await ensureTopics(slugs);
+      const topics = await (prisma as any).topic.findMany({ where: { slug: { in: slugs } } });
+      const bySlug: Record<string, any> = Object.fromEntries(topics.map((t: any) => [t.slug, t]));
+      // Clear previous AI labels (none expected on new)
+      await (prisma as any).roadmapTopic.deleteMany({ where: { roadmapId: newRoadmap.id, source: 'ai' } });
+      const rows = [
+        { slug: labels.primary, conf: labels.confidence.primary, primary: true },
+        ...labels.secondary.map((s: string) => ({ slug: s, conf: labels.confidence.secondary?.[s] ?? 0.5, primary: false })),
+      ];
+      for (const r of rows) {
+        const t = bySlug[r.slug];
+        if (!t) continue;
+        const existing = await (prisma as any).roadmapTopic.findFirst({ where: { roadmapId: newRoadmap.id, topicId: t.id, versionId: null } });
+        if (existing) {
+          await (prisma as any).roadmapTopic.update({ where: { id: existing.id }, data: { confidence: r.conf, isPrimary: r.primary, source: 'ai' } });
+        } else {
+          await (prisma as any).roadmapTopic.create({ data: { roadmapId: newRoadmap.id, versionId: null, topicId: t.id, confidence: r.conf, isPrimary: r.primary, source: 'ai' } });
+        }
+      }
+    } catch {}
 
     return NextResponse.json(newRoadmap, { status: 201 });
 

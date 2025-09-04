@@ -7,6 +7,29 @@ import { assertSameOrigin } from "@/lib/security";
 
 const prisma = new PrismaClient();
 
+function isMaterialsComplete(content: any): { ready: boolean; reason?: string } {
+  try {
+    const milestones: any[] = Array.isArray(content?.milestones) ? content.milestones : [];
+    const mats: any[][] = Array.isArray(content?.materialsByMilestone) ? content.materialsByMilestone : [];
+    // If there are no milestones, consider not ready to avoid empty publishes
+    if (!milestones.length) return { ready: false, reason: 'Roadmap belum memiliki milestone.' };
+    for (let i = 0; i < milestones.length; i++) {
+      const m: any = milestones[i] || {};
+      const expected = Array.isArray(m.subbab)
+        ? m.subbab.length
+        : (Array.isArray(m.sub_tasks) ? m.sub_tasks.length : 0);
+      if (expected > 0) {
+        const mi = Array.isArray(mats[i]) ? mats[i] : [];
+        if (mi.length < expected) return { ready: false, reason: 'Materi belajar belum lengkap. Silakan generate materi dahulu.' };
+      }
+    }
+    if (content?._generation?.inProgress) return { ready: false, reason: 'Proses generate materi masih berjalan. Tunggu hingga selesai.' };
+    return { ready: true };
+  } catch {
+    return { ready: false, reason: 'Tidak dapat memverifikasi materi. Coba generate ulang.' };
+  }
+}
+
 function slugify(input: string) {
   return input
     .toLowerCase()
@@ -29,6 +52,11 @@ export async function POST(req: NextRequest, ctx: any) {
   if (publish) {
     if ((roadmap as any).sourceId) {
       return NextResponse.json({ error: "Forked roadmap cannot be published" }, { status: 400 });
+    }
+    // Gate: ensure learning materials are generated and complete before publishing
+    const check = isMaterialsComplete((roadmap as any).content);
+    if (!check.ready) {
+      return NextResponse.json({ error: check.reason || 'Silakan generate materi belajar terlebih dahulu sebelum mempublikasikan.' }, { status: 400 });
     }
     // ensure unique slug
     let base = slugify(roadmap.title);

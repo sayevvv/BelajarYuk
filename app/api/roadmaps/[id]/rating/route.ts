@@ -35,7 +35,7 @@ export async function GET(_req: NextRequest, ctx: any) {
   const agg = await (prisma as any).roadmapAggregates.findUnique({ where: { roadmapId: id } });
   let my = null;
   if (userId && (rp as any).userId !== userId) {
-    my = await (prisma as any).roadmapRating.findFirst({ where: { roadmapId: id, userId } });
+    my = await (prisma as any).roadmapRating.findFirst({ where: { roadmapId: id, userId, versionId: null } });
   }
   return NextResponse.json({
     aggregate: {
@@ -67,12 +67,16 @@ export async function POST(req: NextRequest, ctx: any) {
   const chk = await ensurePublishedAndNotAuthor(id, userId);
   if (!chk.ok) return NextResponse.json({ error: chk.msg }, { status: chk.status });
 
-  // Upsert rating (idempotent per user per roadmap)
-  await (prisma as any).roadmapRating.upsert({
-    where: { roadmapId_versionId_userId: { roadmapId: id, versionId: chk.versionId, userId } },
-    update: { stars, review },
-    create: { roadmapId: id, versionId: chk.versionId, userId, stars, review },
+  // Upsert rating (idempotent per user per roadmap), but avoid composite upsert with nullable versionId
+  const existing = await (prisma as any).roadmapRating.findFirst({
+    where: { roadmapId: id, userId, versionId: chk.versionId },
+    select: { id: true },
   });
+  if (existing) {
+    await (prisma as any).roadmapRating.update({ where: { id: existing.id }, data: { stars, review } });
+  } else {
+    await (prisma as any).roadmapRating.create({ data: { roadmapId: id, versionId: chk.versionId, userId, stars, review } });
+  }
 
   // Recompute aggregates
   const grouped = await (prisma as any).roadmapRating.groupBy({
@@ -90,8 +94,8 @@ export async function POST(req: NextRequest, ctx: any) {
 
   await (prisma as any).roadmapAggregates.upsert({
     where: { roadmapId: id },
-    update: { avgStars: avg, ratingsCount: total, h1: hist[0], h2: hist[1], h3: hist[2], h4: hist[3], h5: hist[4], wilsonScore: wilson, bayesianScore: bayes },
-    create: { roadmapId: id, avgStars: avg, ratingsCount: total, h1: hist[0], h2: hist[1], h3: hist[2], h4: hist[3], h5: hist[4], wilsonScore: wilson, bayesianScore: bayes },
+    update: { versionId: chk.versionId, avgStars: avg, ratingsCount: total, h1: hist[0], h2: hist[1], h3: hist[2], h4: hist[3], h5: hist[4], wilsonScore: wilson, bayesianScore: bayes },
+    create: { roadmapId: id, versionId: chk.versionId, avgStars: avg, ratingsCount: total, h1: hist[0], h2: hist[1], h3: hist[2], h4: hist[3], h5: hist[4], wilsonScore: wilson, bayesianScore: bayes },
   });
 
   return NextResponse.json({ ok: true });
