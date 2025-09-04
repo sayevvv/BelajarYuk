@@ -113,9 +113,12 @@ export default function DashboardSidebar() {
             {expanded && <span className="text-sm font-medium truncate">Profil</span>}
           </Link>
         )}
-        <SidebarLink expanded={expanded} href="/dashboard/settings" icon={SettingsIcon} label="Settings" />
-        <div className={`${expanded ? 'flex justify-between items-center px-1' : ''}`}>
-          <ThemeToggle className={expanded ? '' : ''} expanded={expanded} />
+        {/* Hide Settings and Theme toggle on mobile; they move into Profile page */}
+        <div className="hidden lg:block">
+          <SidebarLink expanded={expanded} href="/dashboard/settings" icon={SettingsIcon} label="Settings" />
+          <div className={`${expanded ? 'flex justify-between items-center px-1' : ''}`}>
+            <ThemeToggle className={expanded ? '' : ''} expanded={expanded} />
+          </div>
         </div>
       </nav>
 

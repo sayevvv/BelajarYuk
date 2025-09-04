@@ -5,7 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Settings as SettingsIcon, Moon, Sun } from "lucide-react";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -19,13 +19,25 @@ export default function ProfilePage() {
   const [urlInput, setUrlInput] = useState("");
   const [fileName, setFileName] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState<boolean>(false);
 
   useEffect(() => {
     fetch('/api/user/accounts')
       .then(r => (r.ok ? r.json() : null))
       .then(data => { if (data && data.hasOAuth) setIsOAuth(true); })
       .catch(() => {});
+    try {
+      const el = document.documentElement;
+      setIsDark(el.classList.contains('dark'));
+    } catch {}
   }, []);
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle('dark', next);
+    try { localStorage.setItem('theme', next ? 'dark' : 'light'); } catch {}
+  };
 
   if (status === "loading") {
     return <div className="flex h-full items-center justify-center">Memuat profil…</div>;
@@ -44,12 +56,29 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div className="h-full overflow-y-auto p-4 sm:p-6">
       <div className="max-w-3xl">
-  <h1 className="text-2xl font-bold text-slate-900">Profil</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Profil</h1>
+
+        {/* Mobile top actions: full-bleed across screen width */}
+        {session && (
+          <div className="mt-4 lg:hidden -mx-4 sm:-mx-6">
+            <div className="w-full px-4 sm:px-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href="/dashboard/settings" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                  <SettingsIcon className="h-4 w-4" /> Settings
+                </Link>
+                <button onClick={() => toggleTheme()} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                  {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />} {isDark ? 'Light' : 'Dark'}
+                </button>
+                <button onClick={() => signOut({ callbackUrl: '/' })} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm text-white font-semibold hover:bg-red-700">Keluar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Profile header card */}
-        <section className="mt-6 bg-white border border-slate-200 rounded-2xl p-6 flex items-center gap-4">
+  <section className="mt-4 sm:mt-6 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 flex items-center gap-4">
           <div className="relative group h-[72px] w-[72px]">
             {avatarUrl ? (
               <Image
@@ -81,8 +110,14 @@ export default function ProfilePage() {
               <div className="mt-2 text-xs text-emerald-700">Foto profil Google digunakan secara default.</div>
             )}
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button onClick={() => signOut({ callbackUrl: "/" })} className="rounded-lg bg-red-600 px-4 py-2 text-white font-semibold hover:bg-red-700">Keluar</button>
+          <div className="ml-auto hidden lg:flex items-center gap-2">
+            <Link href="/dashboard/settings" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              <SettingsIcon className="h-4 w-4" /> Settings
+            </Link>
+            <button onClick={() => toggleTheme()} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />} {isDark ? 'Light' : 'Dark'}
+            </button>
+            <button onClick={() => signOut({ callbackUrl: '/' })} className="rounded-lg bg-red-600 px-4 py-2 text-white font-semibold hover:bg-red-700">Keluar</button>
           </div>
         </section>
 
