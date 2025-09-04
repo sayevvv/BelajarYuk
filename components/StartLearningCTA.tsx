@@ -14,7 +14,7 @@ export function StartLearningCTA({ className = "" }: { className?: string }) {
         "rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500"
       }
     >
-      Start Learning
+      Mulai Belajar
     </Link>
   );
 }

@@ -19,7 +19,7 @@ const crimsonPro = Crimson_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "BelajarYuk - AI Learning Roadmap",
+  title: "NextStep - AI Self-Paced Learning Roadmap",
   description: "Buat jalur belajar terstruktur dengan AI",
 };
 

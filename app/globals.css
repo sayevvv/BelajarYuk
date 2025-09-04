@@ -83,6 +83,8 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none; /* Chrome, Safari */
   }
+  /* Force the metrics section to use dark background when dark mode is active */
+  .dark #metrics { background-color: #0b0b0b !important; }
   /* Force logo swap regardless of Next/Image wrappers */
   .logo-dark { display: block; }
   .logo-light { display: none; }
