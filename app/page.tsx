@@ -1,6 +1,7 @@
 // app/page.tsx (Swiss Design Landing Page)
 import Link from 'next/link';
-import { ArrowRight, Grid3X3, BookOpen, BarChart3, Users } from 'lucide-react';
+import Image from 'next/image';
+import { Grid3X3, BookOpen, BarChart3, Users } from 'lucide-react';
 import { Space_Mono } from 'next/font/google';
 // import { prisma } from '@/lib/prisma';
 import LandingHeader from '@/components/LandingHeader';
@@ -19,9 +20,9 @@ const spaceMono = Space_Mono({
 // Metric display component following Swiss design principles
 const MetricCard = ({ number, label, delay = 0 }: { number: string; label: string; delay?: number }) => (
   <div className={`${spaceMono.variable}`} style={{ animationDelay: `${delay}ms` }}>
-    <div className="border-l-2 border-slate-900 pl-6">
-      <div className="font-mono text-3xl font-bold text-slate-900 tracking-tight dark:text-slate-100">{number}</div>
-      <div className="text-sm uppercase tracking-wide text-slate-600 mt-1 dark:text-slate-400">{label}</div>
+  <div className="border-l-2 border-slate-300 dark:border-slate-500 pl-6">
+      <div className="font-mono text-3xl font-bold text-slate-500 tracking-tight dark:text-slate-700">{number}</div>
+      <div className="text-sm uppercase tracking-wide text-slate-500 mt-1 dark:text-slate-700">{label}</div>
     </div>
   </div>
 );
@@ -31,7 +32,8 @@ const FeatureBlock = ({ icon: Icon, title, description, number }: { icon: React.
   <div className="group">
     <div className="flex items-start gap-4">
       <div className="flex-shrink-0">
-        <div className="flex h-12 w-12 items-center justify-center bg-slate-900 text-white">
+  {/* Brand accent: blue background for feature icons */}
+  <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[#4B85B8] text-white">
           <Icon className="h-6 w-6" />
         </div>
       </div>
@@ -63,28 +65,50 @@ export default async function LandingPage() {
 
   const hasLatest = Array.isArray(latest) && latest.length > 0;
   const placeholders = [
-    { id: 'p1', slug: 'sample-web-dev', title: 'Beginner Web Development Roadmap', user: { name: 'Community' } },
-    { id: 'p2', slug: 'sample-data-science', title: 'Data Science Foundations', user: { name: 'Community' } },
-    { id: 'p3', slug: 'sample-mobile', title: 'Mobile App Development Basics', user: { name: 'Community' } },
-    { id: 'p4', slug: 'sample-ui-ux', title: 'UI/UX Design Starter Path', user: { name: 'Community' } },
-    { id: 'p5', slug: 'sample-devops', title: 'DevOps Essentials', user: { name: 'Community' } },
-    { id: 'p6', slug: 'sample-ml', title: 'Machine Learning 101', user: { name: 'Community' } },
+    { id: 'p1', slug: 'sample-web-dev', title: 'Roadmap Pengembangan Web Pemula', user: { name: 'Komunitas' } },
+    { id: 'p2', slug: 'sample-data-science', title: 'Dasar-dasar Data Science', user: { name: 'Komunitas' } },
+    { id: 'p3', slug: 'sample-mobile', title: 'Dasar Pengembangan Aplikasi Mobile', user: { name: 'Komunitas' } },
+    { id: 'p4', slug: 'sample-ui-ux', title: 'Jalur Awal Desain UI/UX', user: { name: 'Komunitas' } },
+    { id: 'p5', slug: 'sample-devops', title: 'Esensial DevOps', user: { name: 'Komunitas' } },
+    { id: 'p6', slug: 'sample-ml', title: 'Pengantar Machine Learning', user: { name: 'Komunitas' } },
   ] as any[];
   const marqueeItems = hasLatest ? latest : placeholders;
 
+  // Team members (use local placeholder image for now)
+  const team = [
+    {
+      name: 'Abdullah Shamil Basayev',
+      role: 'Developer',
+      photo: '/assets/team/shamil.jpg',
+      desc: 'Merancang arsitektur AI untuk personalisasi roadmap dan pembuatan materi otomatis yang relevan dengan kebutuhan pengguna.'
+    },
+    {
+      name: 'Dwi Ahmad Khairy',
+      role: 'Developer',
+      photo: '/assets/team/dwik.jpg',
+      desc: 'Membangun antarmuka NextStep yang cepat, responsif, dan nyaman digunakan di perangkat mobile maupun web.'
+    },
+    {
+      name: 'Yefta Octavianus Santo',
+      role: 'Designer',
+      photo: '/assets/team/yefta.jpg',
+      desc: 'Merancang pengalaman belajar yang jelas dan fokus melalui desain yang minimalis, informatif, dan mudah diikuti.'
+    },
+  ];
+
   return (
-  <div className={`min-h-screen bg-white dark:bg-black ${spaceMono.variable}`}>
+  <div className={`min-h-screen light:bg-white dark:bg-black ${spaceMono.variable}`}>
       <LandingHeader />
 
       <main className="pt-16">
         {/* Hero Section */}
-  <section className="relative overflow-hidden bg-white dark:bg-black">
+  <section className="relative overflow-hidden light:bg-white dark:bg-black">
           <MacbookScroll
             title={
               <span className="text-slate-900 dark:text-white">
-                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">Learn smarter,</span>
-                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">not harder.</span>
-                <span className="block mt-3 text-sm sm:text-base font-normal tracking-wide text-slate-500 dark:text-slate-400">Belajar sesuai kebutuhanmu</span>
+                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">Belajar Lebih Lanjut,</span>
+                <span className="block text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">Lebih Jauh</span>
+                <span className="block mt-3 text-sm sm:text-base font-normal tracking-wide text-slate-600 dark:text-slate-300">Bentuk Rencana Belajarmu Sendiri.</span>
               </span>
             }
             badge={<HeroBadge className="h-10 w-10 -rotate-12 transform" />}
@@ -92,26 +116,27 @@ export default async function LandingPage() {
             showGradient={false}
             cta={
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-10">
-                <StartLearningCTA />
+                {/* Primary CTA with brand blue */}
+                <StartLearningCTA className="inline-flex items-center justify-center gap-3 rounded-xl bg-[#4B85B8] px-5 py-2.5 text-white font-medium hover:opacity-85 transition-colors" />
                 <a
                   href="#features"
-                  className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  className="rounded-xl border px-5 py-2.5 text-sm font-medium text-[#4B85B8] hover:bg-orange-100 dark:text-[#FCA142] dark:hover:bg-white/5"
                 >
-                  Learn More
+                  Pelajari Lebih Lanjut
                 </a>
               </div>
             }
           />
         </section>
 
-        {/* Marquee */}
-  <section aria-label="Published Roadmaps" className="border-y border-slate-200 dark:border-[#1f1f1f] bg-white dark:bg-black">
+    {/* Marquee */}
+  <section aria-label="Roadmap Terbit" className="border-y border-slate-200 dark:border-[#1f1f1f] bg-white dark:bg-black">
           <div className="max-w-7xl mx-auto px-0 sm:px-6">
             <div className="group pause-on-hover relative overflow-hidden py-4">
-              <div className="pointer-events-none absolute left-0 top-0 h-full w-16 bg-gradient-to-r from-white to-transparent dark:from-black" />
-              <div className="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-white to-transparent dark:from-black" />
-              <div className="flex w-[200%] animate-scroll-x will-change-transform">
-                <ul className="flex items-center gap-3 pr-3">
+              <div className="pointer-events-none absolute left-0 top-0 h-full w-16 bg-gradient-to-r light:from-white to-transparent dark:from-black" />
+              <div className="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l light:from-white to-transparent dark:from-black" />
+              <div className="flex w-max animate-scroll-x will-change-transform">
+                <ul className="shrink-0 flex items-center gap-3 pr-3">
                   {marqueeItems.map((r: any) => (
                     <li key={`a-${r.id}`} className="shrink-0">
                       <Link
@@ -119,15 +144,15 @@ export default async function LandingPage() {
                         className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-[#2a2a2a] bg-slate-50 dark:bg-[#0f0f0f] px-3 py-1.5 text-sm text-slate-700 dark:text-neutral-200 hover:bg-slate-100 dark:hover:bg-[#1a1a1a] hover:border-slate-300 dark:hover:border-[#3a3a3a] transition-colors"
                       >
                         <span className="font-semibold truncate max-w-[16rem]">{r.title}</span>
-                        <span className="text-xs text-slate-500 dark:text-neutral-400">• by {r.user?.name ?? 'Community'}</span>
+                        <span className="text-xs text-slate-500 dark:text-neutral-400">• oleh {r.user?.name ?? 'Komunitas'}</span>
                         {!hasLatest && (
-                          <span className="ml-1 rounded bg-slate-200 dark:bg-[#2a2a2a] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-700 dark:text-neutral-200">Sample</span>
+                          <span className="ml-1 rounded bg-slate-200 dark:bg-[#2a2a2a] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-700 dark:text-neutral-200">Contoh</span>
                         )}
                       </Link>
                     </li>
                   ))}
                 </ul>
-                <ul className="flex items-center gap-3 pr-3" aria-hidden="true">
+                <ul className="shrink-0 flex items-center gap-3 pr-3" aria-hidden="true">
                   {marqueeItems.map((r: any) => (
                     <li key={`b-${r.id}`} className="shrink-0">
                       <Link
@@ -135,9 +160,9 @@ export default async function LandingPage() {
                         className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-[#2a2a2a] bg-slate-50 dark:bg-[#0f0f0f] px-3 py-1.5 text-sm text-slate-700 dark:text-neutral-200 hover:bg-slate-100 dark:hover:bg-[#1a1a1a] hover:border-slate-300 dark:hover:border-[#3a3a3a] transition-colors"
                       >
                         <span className="font-semibold truncate max-w-[16rem]">{r.title}</span>
-                        <span className="text-xs text-slate-500 dark:text-neutral-400">• by {r.user?.name ?? 'Community'}</span>
+                        <span className="text-xs text-slate-500 dark:text-neutral-400">• oleh {r.user?.name ?? 'Komunitas'}</span>
                         {!hasLatest && (
-                          <span className="ml-1 rounded bg-slate-200 dark:bg-[#2a2a2a] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-700 dark:text-neutral-200">Sample</span>
+                          <span className="ml-1 rounded bg-slate-200 dark:bg-[#2a2a2a] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-700 dark:text-neutral-200">Contoh</span>
                         )}
                       </Link>
                     </li>
@@ -149,12 +174,12 @@ export default async function LandingPage() {
         </section>
 
         {/* Metrics */}
-  <section id="metrics" className="py-16 bg-slate-50 dark:bg-black">
+  <section id="metrics" className="py-16 bg-orange-50 dark:!bg-[#0b0b0b] transition-colors">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              <MetricCard number="10K+" label="Active Learners" delay={0} />
-              <MetricCard number="500+" label="Learning Paths" delay={100} />
-              <MetricCard number="95%" label="Success Rate" delay={200} />
+              <MetricCard number="XX+" label="Pengguna Aktif" delay={0} />
+              <MetricCard number="XXX+" label="Jalur Belajar" delay={100} />
+              <MetricCard number="XX%" label="Tingkat Keberhasilan" delay={200} />
             </div>
           </div>
         </section>
@@ -163,54 +188,54 @@ export default async function LandingPage() {
     <section id="features" className="py-24 sm:py-32 scroll-mt-28">
           <div className="max-w-7xl mx-auto px-6">
             <div className="mb-16">
-      <p className={`text-xs uppercase tracking-wider text-slate-500 mb-3 font-mono dark:text-neutral-400`}>Core Features</p>
-      <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight max-w-4xl dark:text-neutral-100">
-                Ship faster from “I want to learn X” to a clear, achievable plan
+              <p className={`text-xs uppercase tracking-wider text-slate-500 mb-3 font-mono dark:text-neutral-400`}>Fitur Unggulan</p>
+              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight max-w-4xl dark:text-neutral-100">
+                Pembelajaran personal, adaptif, dan relevan dengan dunia kerja
               </h2>
-      <p className="mt-4 text-slate-600 dark:text-neutral-300 max-w-2xl">
-                We combine AI planning, visual thinking, and progress tracking so you can focus on learning—not logistics.
+              <p className="mt-4 text-slate-600 dark:text-neutral-300 max-w-2xl">
+                NextStep memungkinkan pengguna belajar efisien dan fokus lewat roadmap AI, penjadwalan fleksibel, dan tujuan belajar terintegrasi.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
               <FeatureBlock
                 icon={Grid3X3}
                 number="01"
-                title="AI-Powered Roadmaps"
-                description="Generate a step-by-step plan tailored to your goals, starting point, and available time. Edit it anytime with natural language."
+                title="Metode Personalisasi"
+                description="Roadmap belajar dinamis dan adaptif yang disusun otomatis oleh AI berdasarkan tujuan, waktu, dan tingkat pengetahuan pengguna."
               />
               <FeatureBlock
                 icon={BookOpen}
                 number="02"
-                title="Interactive Mindmaps"
-                description="Turn complex topics into interactive maps. Collapse sections, add notes, and attach resources to keep context in one place."
+                title="Pembuatan Konten"
+                description="Materi dari berbagai sumber (konten terbuka, materi mitra) yang dirangkai secara terstruktur oleh AI."
               />
               <FeatureBlock
                 icon={BarChart3}
                 number="03"
-                title="Progress & Reflection"
-                description="Mark milestones, log reflections, and get nudges when you’re stuck. Weekly summaries help you see progress over time."
+                title="Dukungan Belajar"
+                description="Chatbot kontekstual (berbasis RAG) yang memahami materi yang dipelajari serta pembuatan kuis dan flashcard otomatis."
               />
               <FeatureBlock
                 icon={Users}
                 number="04"
-                title="Sharing & Review"
-                description="Publish your roadmap, invite feedback, or fork others’ plans. Learn together with lightweight collaboration."
+                title="Fleksibilitas Kurikulum"
+                description="Sangat fleksibel—roadmap dapat dimodifikasi, diperbarui dinamis, dan di-fork/dibagikan ke pengguna lain."
               />
             </div>
 
             {/* Best practice callouts */}
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Clarity by default</h3>
-                <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Structured milestones, short descriptions, and scoped tasks keep you moving without overwhelm.</p>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Kejelasan</h3>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Targetnya jelas, penjelasannya mudah dimengerti, dan tugasnya spesifik agar Anda betah belajar.</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Evidence-based pacing</h3>
-                <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">We encourage spaced practice and reflection so skills stick, not just pass a checklist.</p>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Berbasis bukti</h3>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Latihan soal dan evaluasi diri membantu kemampuan benar-benar melekat, bukan hanya menyelesaikan daftar.</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Own your data</h3>
-                <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Export roadmaps and history anytime. Your learning, your control.</p>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Publikasi dan Riwayat</h3>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-neutral-300">Anda bisa mengekspor roadmap dan riwayat kapan pun. Data belajar sepenuhnya milik Anda.</p>
               </div>
             </div>
           </div>
@@ -220,28 +245,32 @@ export default async function LandingPage() {
         <section id="about" className="py-32 sm:py-40 border-t border-slate-200 dark:border-[#1f1f1f] scroll-mt-28">
           <div className="max-w-7xl mx-auto px-6 py-16 lg:py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
             <div>
-              <p className={`text-xs uppercase tracking-wider text-slate-500 mb-3 font-mono dark:text-slate-400`}>About</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-neutral-100">Why we built BelajarYuk</h2>
+              <p className={`text-xs uppercase tracking-wider text-slate-500 mb-3 font-mono dark:text-slate-400`}>Tentang NextStep</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-neutral-100">Mengapa kami membangun NextStep</h2>
               <p className="mt-5 text-slate-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
-                Most learners quit not because topics are impossible, but because the path is unclear. BelajarYuk turns goals into
-                concrete, visual plans—then keeps you accountable with gentle progress cues and easy editing.
+                NextStep adalah platform pembelajaran mandiri berbasis mobile dan web yang dirancang untuk memberikan pengalaman belajar personal, adaptif, dan relevan dengan tuntutan dunia kerja di era digital.
               </p>
               <p className="mt-4 text-slate-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
-                We design for clarity, momentum, and community. Whether you’re switching careers or sharpening one skill, our tools
-                keep you focused on what matters next.
+                Platform ini memanfaatkan AI untuk membangun roadmap belajar yang dapat disesuaikan, menata waktu belajar sesuai jadwal, serta menyusun tujuan pembelajaran yang terintegrasi dengan materi dan praktik—membantu pengguna belajar efisien dan fokus.
+              </p>
+              <p className="mt-4 text-slate-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
+                NextStep juga memungkinkan pengguna membagikan roadmap belajar kepada komunitas. Roadmap yang dipublikasikan dapat diadopsi, disesuaikan, atau dimodifikasi, sehingga proses belajar menjadi kolaboratif dan menginspirasi.
+              </p>
+              <p className="mt-4 text-slate-600 dark:text-neutral-300 leading-relaxed max-w-2xl">
+                NextStep melayani berbagai profil: pemuda yang memasuki dunia kerja hingga profesional yang ingin upskilling/reskilling—semua dapat merancang roadmap personal sesuai tujuan, durasi, dan praktik spesifik.
               </p>
             </div>
             <div>
               <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Principles we follow</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Pilar NextStep</h3>
                 <ul className="mt-3 space-y-2 text-sm text-slate-700 dark:text-neutral-300 list-disc pl-5">
-                  <li>Start with a clear end-state; work backward to milestones.</li>
-                  <li>Reduce cognitive load with visual structure and simple controls.</li>
-                  <li>Encourage reflection and iteration—plans should evolve.</li>
-                  <li>Respect privacy and portability; you own your learning data.</li>
+                  <li>Personalisasi AI — roadmap disusun sesuai tujuan, waktu, dan level Anda.</li>
+                  <li>Jadwal adaptif — sinkron dengan kalender; sesi singkat dan konsisten.</li>
+                  <li>Tujuan terukur — setiap modul punya output dan kriteria selesai.</li>
+                  <li>Kolaborasi komunitas — bagikan, fork, dan sesuaikan roadmap bersama.</li>
                 </ul>
                 <div className="mt-6 rounded-lg bg-slate-50 p-4 text-slate-700 dark:bg-[#111] dark:text-neutral-200">
-                  Tip: Review your roadmap weekly. Adjust scope, add notes from what you learned, and celebrate progress.
+                  Praktik: Jadwalkan 25–50 menit per sesi, tandai bagian yang sulit, lalu perbarui prioritas di akhir pekan.
                 </div>
               </div>
             </div>
@@ -249,15 +278,15 @@ export default async function LandingPage() {
         </section>
 
         {/* Process */}
-  <section className="py-24 bg-slate-900 dark:bg-black text-white">
+  <section id='metrics' className="py-24 bg-slate-400 dark:!bg-[#0b0b0b] transition-colors text-white">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               <div>
                 <div className={`text-xs uppercase tracking-wider text-slate-400 mb-6 font-mono`}>
-                  How It Works
+                  Cara Kerja
                 </div>
                 <h2 className="text-4xl font-bold mb-8 leading-tight">
-                  Three steps to smarter learning
+                  Tiga langkah untuk belajar lebih cerdas
                 </h2>
                 <div className="space-y-8">
                   <div className="flex gap-6">
@@ -265,9 +294,9 @@ export default async function LandingPage() {
                       1
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold mb-2">Define Your Goal</h3>
-                      <p className="text-slate-300 leading-relaxed">
-                        Tell our AI what you want to learn and your current skill level.
+                      <h3 className="text-xl font-bold mb-2">Tentukan Tujuan Anda</h3>
+                      <p className="text-slate-100 leading-relaxed">
+                        Beritahu AI kami apa yang ingin Anda pelajari dan tingkat kemampuan Anda saat ini.
                       </p>
                     </div>
                   </div>
@@ -276,9 +305,9 @@ export default async function LandingPage() {
                       2
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold mb-2">Get Your Roadmap</h3>
-                      <p className="text-slate-300 leading-relaxed">
-                        Receive a personalized learning path with structured milestones.
+                      <h3 className="text-xl font-bold mb-2">Dapatkan Roadmap Anda</h3>
+                      <p className="text-slate-100 leading-relaxed">
+                        Dapatkan jalur belajar personal dengan tonggak yang terstruktur.
                       </p>
                     </div>
                   </div>
@@ -287,9 +316,9 @@ export default async function LandingPage() {
                       3
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold mb-2">Learn & Track</h3>
-                      <p className="text-slate-300 leading-relaxed">
-                        Follow your roadmap and track progress with interactive tools.
+                      <h3 className="text-xl font-bold mb-2">Belajar & Pantau</h3>
+                      <p className="text-slate-100 leading-relaxed">
+                        Ikuti roadmap Anda dan pantau progres dengan alat interaktif.
                       </p>
                     </div>
                   </div>
@@ -299,20 +328,20 @@ export default async function LandingPage() {
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500"></div>
                 <div className="relative p-8 bg-white dark:bg-[#0f0f0f] text-slate-900 dark:text-neutral-100">
                   <div className={`text-xs uppercase tracking-wider text-slate-500 mb-4 font-mono dark:text-slate-400`}>
-                    Sample Output
+                    Contoh Output yang Dihasilkan
                   </div>
                   <div className="space-y-4">
                     <div className="border-l-2 border-slate-900 pl-4">
-                      <div className="font-bold">Week 1-2: Fundamentals</div>
-                      <div className="text-sm text-slate-600 dark:text-slate-300">Basic concepts and principles</div>
+                      <div className="font-bold">Minggu 1-2: Dasar-dasar</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Konsep dan prinsip dasar</div>
                     </div>
                     <div className="border-l-2 border-slate-300 pl-4">
-                      <div className="font-bold">Week 3-4: Practical Application</div>
-                      <div className="text-sm text-slate-600 dark:text-slate-300">Hands-on projects and exercises</div>
+                      <div className="font-bold">Minggu 3-4: Penerapan Praktis</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Proyek dan latihan langsung</div>
                     </div>
                     <div className="border-l-2 border-slate-300 pl-4">
-                      <div className="font-bold">Week 5-6: Advanced Topics</div>
-                      <div className="text-sm text-slate-600 dark:text-slate-300">Deep dive into complex subjects</div>
+                      <div className="font-bold">Minggu 5-6: Topik Lanjutan</div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">Pendalaman materi yang kompleks</div>
                     </div>
                   </div>
                 </div>
@@ -321,33 +350,56 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* CTA */}
+  {/* Team */}
+        <section id="team" className="py-24 sm:py-32">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center max-w-3xl mx-auto mb-12">
+              <p className={`text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 font-mono`}>Tim Pengembang</p>
+              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                Berkenalan dengan tim di balik NextStep
+              </h2>
+              <p className="mt-4 text-slate-600 dark:text-slate-300">
+                Kami membangun pengalaman belajar yang personal, adaptif, dan relevan—dengan perhatian pada detail dan kegunaan.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {team.map((m) => (
+                <div key={m.name} className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
+                  <div className="flex items-center gap-4">
+                    <Image
+                      src={m.photo}
+                      alt={m.name}
+                      width={96}
+                      height={96}
+                      className="h-24 w-24 rounded-full object-cover ring-4 ring-[#4B85B8]/10"
+                    />
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{m.name}</h3>
+                      <p className="text-sm font-medium text-[#4B85B8] dark:text-[#FCA142]">{m.role}</p>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-slate-600 dark:text-neutral-300">{m.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+  {/* CTA */}
   <section className="py-24 sm:py-32">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center max-w-3xl mx-auto">
               <div className={`text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-6 font-mono`}>
-                Ready to Start?
+                Siap Memulai?
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 dark:text-slate-100 leading-tight mb-8">
-                Begin your learning journey today
+              <h2 className="text-4xl lg:text-6xl font-bold text-slate-900 dark:text-slate-100 leading-tight mb-8">
+                Melangkah Bersama Kami!
               </h2>
               <p className="text-xl text-slate-600 dark:text-slate-300 leading-relaxed mb-12">
-                Join thousands of learners who have transformed their skills with our AI-powered platform.
+    Mulai langkah baru dengan NextStep—rancang roadmap personal dan capai tujuan belajar Anda.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <StartLearningCTA className="inline-flex items-center justify-center gap-3 bg-slate-900 dark:bg-white dark:text-black px-8 py-4 text-white font-medium hover:bg-slate-800 dark:hover:bg-neutral-200 transition-colors" />
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center px-8 py-4 border border-slate-300 dark:border-[#2a2a2a] text-slate-700 dark:text-neutral-200 font-medium hover:bg-slate-50 dark:hover:bg-[#111] transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center px-8 py-4 border border-slate-300 dark:border-[#2a2a2a] text-slate-700 dark:text-neutral-200 font-medium hover:bg-slate-50 dark:hover:bg-[#111] transition-colors"
-                >
-                  Sign In
-                </Link>
+    <StartLearningCTA className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#4B85B8] px-12 py-4 text-white font-medium hover:opacity-85 transition-colors" />
               </div>
             </div>
           </div>
@@ -358,49 +410,49 @@ export default async function LandingPage() {
   <footer className="bg-slate-50 dark:bg-black border-t border-slate-200 dark:border-[#1f1f1f]">
         <div className="max-w-7xl mx-auto px-6 py-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-            <div className="lg:col-span-4">
+            <div className="lg:col-span-6">
               <Link href="/" className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                BelajarYuk
+                NextStep
               </Link>
               <p className="mt-4 text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm">
-                AI-powered learning platform that creates personalized roadmaps and interactive mindmaps for efficient skill development.
+                Platform pembelajaran mandiri berbasis AI untuk menyusun roadmap personal, penjadwalan belajar, dan tujuan terintegrasi.
               </p>
               <div className={`mt-6 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono`}>
-                Made with precision
+                MADE WITH PRECISION
               </div>
             </div>
-            <div className="lg:col-span-8">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                <div>
-                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Product</h4>
+            <div className="lg:col-span-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+                {/* <div>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Produk</h4>
                   <ul className="space-y-3 text-sm">
-                    <li><Link href="#features" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Features</Link></li>
-                    <li><Link href="#metrics" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Metrics</Link></li>
-                    <li><Link href="/dashboard" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Dashboard</Link></li>
+                    <li><Link href="#features" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Fitur</Link></li>
+                    <li><Link href="#metrics" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Metrik</Link></li>
+                    <li><Link href="/dashboard" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Dasbor</Link></li>
                   </ul>
-                </div>
+                </div> */}
                 <div>
-                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Company</h4>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Tim Pengembang</h4>
                   <ul className="space-y-3 text-sm">
-                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">About</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Tentang</Link></li>
                     <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Blog</Link></li>
-                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Careers</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Karier</Link></li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Support</h4>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Dukungan</h4>
                   <ul className="space-y-3 text-sm">
-                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Help Center</Link></li>
-                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Contact</Link></li>
-                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Community</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Pusat Bantuan</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Kontak</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Komunitas</Link></li>
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4 uppercase tracking-wide text-sm">Legal</h4>
                   <ul className="space-y-3 text-sm">
-                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Privacy</Link></li>
-                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Terms</Link></li>
-                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Security</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Privasi</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Ketentuan</Link></li>
+                    <li><Link href="#" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Keamanan</Link></li>
                   </ul>
                 </div>
               </div>
@@ -409,10 +461,7 @@ export default async function LandingPage() {
           <div className="mt-16 pt-8 border-t border-slate-200 dark:border-slate-800">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div className={`text-xs text-slate-500 dark:text-slate-400 font-mono tracking-wider`}>
-                © {new Date().getFullYear()} BelajarYuk. All rights reserved.
-              </div>
-              <div className={`text-xs text-slate-500 dark:text-slate-400 font-mono tracking-wider`}>
-                Swiss Design Principles Applied
+                © {new Date().getFullYear()} NextStep
               </div>
             </div>
           </div>
