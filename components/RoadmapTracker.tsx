@@ -22,9 +22,7 @@ import {
 } from 'lucide-react';
 import RatingSummary from '@/components/RatingSummary';
 import TopicChips from '@/components/TopicChips';
-import dynamic from 'next/dynamic';
 import { Transition } from '@headlessui/react';
-const TopicSelector = dynamic(() => import('@/components/TopicSelector'), { ssr: false });
 
 type Roadmap = {
   id: string;
@@ -45,7 +43,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [progress, setProgress] = useState<{ completedTasks: Record<string, boolean>; percent: number } | null>(null);
   const [publishing, setPublishing] = useState(false);
-  const [showTopicModal, setShowTopicModal] = useState(false);
+  const [confirmPublishOpen, setConfirmPublishOpen] = useState(false);
   const [view, setView] = useState<'graph' | 'checklist'>('graph');
   const [selectedMilestone, setSelectedMilestone] = useState<any | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -219,6 +217,12 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
       }
       const rj = await res.json();
       setRoadmap((prev) => ({ ...(prev as any), ...rj }));
+      // Show confirmation toast on success
+      if (publish) {
+        show({ type: 'success', title: 'Dipublikasikan', message: 'Roadmap berhasil dipublikasikan.' });
+      } else {
+        show({ type: 'success', title: 'Berhasil', message: 'Publikasi dibatalkan.' });
+      }
     } catch (e: any) {
   setError(e.message || 'Gagal memperbarui publikasi');
   show({ type: 'error', title: 'Gagal', message: e.message || 'Gagal memperbarui publikasi' });
@@ -229,8 +233,8 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
 
   const handlePublish = async (publish: boolean) => {
     if (publish) {
-      // Open topic modal so author can review/override before publishing
-      setShowTopicModal(true);
+  // Open confirmation modal before publishing
+  setConfirmPublishOpen(true);
       return;
     }
     // Confirm before unpublishing
@@ -614,24 +618,27 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
         </div>
       )}
 
-      {showTopicModal && (
+      {confirmPublishOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowTopicModal(false)} />
-          <div className="relative bg-white dark:bg-[#0f0f0f] rounded-xl shadow-xl w-[min(720px,92vw)] max-h-[86vh] overflow-y-auto">
-            <div className="px-5 py-4 border-b border-slate-200 dark:border-[#1f1f1f] flex items-center justify-between">
-              <h3 className="text-base font-semibold">Tinjau Topik Sebelum Publikasi</h3>
-              <button className="text-slate-500 hover:text-slate-800" onClick={() => setShowTopicModal(false)}>Tutup</button>
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmPublishOpen(false)} />
+          <div className="relative bg-white dark:bg-[#0f0f0f] rounded-xl shadow-xl w-[min(520px,92vw)]">
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-[#1f1f1f]">
+              <h3 className="text-base font-semibold">Publikasikan Roadmap?</h3>
             </div>
-            <div className="p-5">
-              <div className="mb-3 text-sm text-slate-600">Topik awal digenerate otomatis berdasarkan isi roadmap. Anda dapat menyesuaikan di bawah ini.</div>
-              <TopicSelector roadmapId={roadmap.id} onSaved={() => {}} />
-              <div className="mt-5 flex justify-end gap-2">
-                <button className="px-3 py-1.5 text-sm rounded border" onClick={() => setShowTopicModal(false)}>Batal</button>
-                <button
-                  className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white"
-                  onClick={async () => { setShowTopicModal(false); await doPublish(true); }}
-                >Publikasikan</button>
-              </div>
+            <div className="p-5 text-sm text-slate-700 dark:text-neutral-300 space-y-3">
+              <p>Roadmap Anda akan tampil di halaman publik dan dapat disimpan atau dinilai oleh orang lain.</p>
+              <p>Anda bisa membatalkan publikasi kapan saja dari menu yang sama.</p>
+            </div>
+            <div className="px-5 py-4 border-t border-slate-200 dark:border-[#1f1f1f] flex justify-end gap-2">
+              <button className="px-3 py-1.5 rounded border text-sm" onClick={() => setConfirmPublishOpen(false)}>Batal</button>
+              <button
+                className="px-3 py-1.5 rounded bg-blue-600 text-white text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={publishing}
+                onClick={async () => {
+                  setConfirmPublishOpen(false);
+                  await doPublish(true);
+                }}
+              >Publikasikan</button>
             </div>
           </div>
         </div>

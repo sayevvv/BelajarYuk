@@ -21,8 +21,28 @@ export default function TopicSelector({ roadmapId, onSaved }: { roadmapId: strin
     return () => { active = false };
   }, []);
 
+  // Prefill from roadmap's current topics (AI or author), marking primary
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/roadmaps/${roadmapId}/topics`, { cache: 'no-store' });
+        const d = await r.json();
+        if (!active) return;
+        if (Array.isArray(d?.topics) && d.topics.length) {
+          const ids = d.topics.map((t: any) => t.id).filter(Boolean);
+          const primaryRow = d.topics.find((t: any) => t.isPrimary);
+          setSelected(ids);
+          setPrimary(primaryRow?.id);
+        }
+      } catch {}
+    })();
+    return () => { active = false };
+  }, [roadmapId]);
+
   const canSave = selected.length > 0 && (!primary || selected.includes(primary));
   const primaryOptions = useMemo(() => all.filter(t => selected.includes(t.id)), [all, selected]);
+  const primaryName = useMemo(() => all.find(t => t.id === primary)?.name || '', [all, primary]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -59,23 +79,36 @@ export default function TopicSelector({ roadmapId, onSaved }: { roadmapId: strin
               key={t.id}
               type="button"
               onClick={() => toggle(t.id)}
-              className={`px-2 py-1 rounded-full border text-xs ${active ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-            >{t.name}</button>
+              className={`relative px-2 py-1 rounded-full border text-xs ${active ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            >
+              {t.name}
+              {selected.length > 1 && primary === t.id && (
+                <span className="ml-1 inline-flex items-center rounded-full bg-blue-600 text-white px-1.5 py-0.5 text-[10px]">Utama</span>
+              )}
+            </button>
           );
         })}
       </div>
 
-      <div className="flex items-center gap-2">
-        <label className="text-sm text-slate-700">Topik Utama:</label>
-        <select
-          className="text-sm border rounded px-2 py-1"
-          value={primary || ''}
-          onChange={(e) => setPrimary(e.target.value || undefined)}
-        >
-          <option value="">— Tidak ada —</option>
-          {primaryOptions.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-      </div>
+      {selected.length > 1 && (
+        <div className="text-[12px] text-slate-600">
+          Topik utama saat ini: <span className="font-semibold">{primary ? primaryName : 'Belum dipilih'}</span>
+        </div>
+      )}
+
+      {selected.length > 1 && (
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-slate-700">Topik Utama:</label>
+          <select
+            className="text-sm border rounded px-2 py-1"
+            value={primary || ''}
+            onChange={(e) => setPrimary(e.target.value || undefined)}
+          >
+            <option value="">— Tidak ada —</option>
+            {primaryOptions.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <button disabled={!canSave || saving} onClick={submit} className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white disabled:opacity-50">

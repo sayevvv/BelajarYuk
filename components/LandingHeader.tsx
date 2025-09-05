@@ -67,10 +67,9 @@ export default function LandingHeader() {
             <ThemeToggle />
             <Link href="#features" className="text-sm font-medium light:text-slate-600 light:hover:text-slate-900 dark:text-neutral-100 dark:hover:text-neutral-300">Fitur</Link>
             <Link href="#about" className="text-sm font-medium light:text-slate-600 light:hover:text-slate-900 dark:text-neutral-100 dark:hover:text-neutral-300">Tentang</Link>
-            <Link href="/login" className="text-sm font-medium light:text-slate-600 light:hover:text-slate-900 dark:text-neutral-100 dark:hover:text-neutral-300">Masuk</Link>
             <span aria-hidden className="mx-2 h-6 w-px bg-slate-200 dark:bg-slate-700" />
             <Link href={dest} className="ml-1 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium bg-slate-800 text-white hover:bg-slate-600">
-              Mulai Belajar
+              Masuk
             </Link>
           </nav>
 
@@ -99,9 +98,14 @@ export default function LandingHeader() {
                 </div>
                 <Link href="#features" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm font-medium light:text-slate-700 light:hover:bg-slate-100 dark:text-neutral-100 dark:hover:bg-white/10">Fitur</Link>
                 <Link href="#about" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm font-medium light:text-slate-700 light:hover:bg-slate-100 dark:text-neutral-100 dark:hover:bg-white/10">Tentang</Link>
-                <Link href="/login" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm font-medium light:text-slate-700 light:hover:bg-slate-100 dark:text-neutral-100 dark:hover:bg-white/10">Masuk</Link>
                 <div className="mt-2 border-t border-slate-200/70 dark:border-white/10 pt-2">
-                  <Link href={dest} onClick={() => setMenuOpen(false)} className="block text-center rounded-xl light:bg-slate-900 px-4 py-2 text-sm font-medium text-white light:hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200">Mulai Belajar</Link>
+                  <Link
+                    href={dest}
+                    onClick={() => setMenuOpen(false)}
+                    className="block text-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+                  >
+                    Masuk
+                  </Link>
                 </div>
               </div>
             )}

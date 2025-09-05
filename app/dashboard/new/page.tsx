@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, FormEvent, Fragment } from "react";
+import { useState, useEffect, useRef, FormEvent, Fragment } from "react";
 import { useToast } from '@/components/ui/ToastProvider';
 import { z } from "zod";
 import RoadmapGraph from "@/components/RoadmapGraph";
@@ -514,9 +514,12 @@ export default function NewRoadmapPage() {
 
   // Remove unsaved-progress warnings: rely on local draft cache instead
 
-  // Draft cache: restore on load (per user) and persist on changes
+  // Draft cache: restore once on load (per user) and persist on changes
+  const restoredRef = useRef(false);
   useEffect(() => {
+    if (restoredRef.current) return;
     if (typeof window === 'undefined') return;
+    if (isLoading || roadmapData) return; // don't override active gen or loaded roadmap
     try {
       const raw = localStorage.getItem(getDraftKey());
       if (!raw) return;
@@ -529,10 +532,11 @@ export default function NewRoadmapPage() {
         setActivePromptMode(draft?.activePromptMode === 'advanced' ? 'advanced' : 'simple');
         setShowTextView(Boolean(draft?.showTextView));
         setIsSaved(false);
+        restoredRef.current = true;
       }
     } catch {}
   // re-run when session becomes available so key can change
-  }, [status]);
+  }, [status, isLoading, roadmapData]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -853,7 +857,7 @@ export default function NewRoadmapPage() {
         )}
 
         <div className={cn(
-          "relative flex-1 overflow-hidden"
+          "relative flex-1 min-h-0 overflow-hidden"
         )}>
           {/* Konten utama: Graph atau Teks */}
           {roadmapData ? (

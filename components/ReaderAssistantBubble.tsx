@@ -103,7 +103,13 @@ export default function ReaderAssistantBubble() {
     <>
       {/* Launcher: fixed bottom-right on all screens (hidden when open) */}
       {!open && (
-        <div className="fixed bottom-8 right-8 z-50">
+        <div
+          className="fixed z-50"
+          style={{
+            bottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
+            right: 'calc(2rem + env(safe-area-inset-right, 0px))',
+          }}
+        >
           <div className="relative animate-mascot">
             <button
               aria-label="Buka asisten"
@@ -255,7 +261,10 @@ export default function ReaderAssistantBubble() {
                 <div className="inline-block w-fit max-w-[85%] break-words mr-auto bg-slate-100 rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap">{a}</div>
               ) : null}
             </div>
-            <div className="p-3 border-t border-slate-200">
+            <div
+              className="p-3 border-t border-slate-200"
+              style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+            >
               <form
                 onSubmit={(e) => { e.preventDefault(); ask(); }}
                 className="border border-slate-300 rounded-lg flex items-end gap-2 p-2 focus-within:ring-2 focus-within:ring-slate-300"
