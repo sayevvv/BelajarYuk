@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/auth.config';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import { PromptTemplate } from '@langchain/core/prompts';
+import { githubChatCompletion } from '@/lib/ai/githubModels';
 import { assertSameOrigin, sanitizeString } from '@/lib/security';
 import { prisma } from '@/lib/prisma';
 
@@ -47,29 +46,26 @@ export async function POST(req: NextRequest) {
     const ctx = [`Judul: ${title}`, `Isi:\n${bodyText}`, points.length ? `Poin:\n- ${points.join('\n- ')}` : ''].filter(Boolean).join('\n\n');
     const past = Array.isArray(history) ? history.slice(-6).map((m: any) => ({ role: m?.role === 'user' ? 'user' : 'assistant', content: sanitizeString(String(m?.content || ''), { maxLen: 600 }) })) : [];
 
-    const tmpl = new PromptTemplate({
-      template: `Anda adalah asisten belajar. Jawab pertanyaan HANYA berdasarkan konteks materi di bawah ini. Jika jawabannya tidak ada di konteks, katakan dengan jujur bahwa Anda tidak menemukan jawabannya pada materi ini dan beri saran bagian mana yang perlu dibaca ulang. Gunakan bahasa Indonesia yang jelas dan ringkas.
+    // Build messages for GitHub Models chat completion
+    const messages = [
+      {
+        role: 'system' as const,
+        content:
+          'Anda adalah asisten belajar. Jawab pertanyaan HANYA berdasarkan konteks materi yang diberikan. Jika jawabannya tidak ada di konteks, katakan dengan jujur bahwa Anda tidak menemukannya pada materi ini dan sarankan bagian mana yang perlu dibaca ulang. Gunakan bahasa Indonesia yang jelas dan ringkas. Batas maksimal 8 kalimat.',
+      },
+      {
+        role: 'user' as const,
+        content: `KONTEKS MATERI:\n${ctx}`.slice(0, 6000),
+      },
+      // Include short conversation history (already sanitized and trimmed above)
+      ...past.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      {
+        role: 'user' as const,
+        content: `Pertanyaan: ${q}\n\nJawablah berdasarkan konteks di atas.`,
+      },
+    ];
 
-KONTEKS MATERI:
-{context}
-
-Riwayat Singkat Percakapan (opsional):
-{history}
-
-Pertanyaan: {question}
-
-Jawaban yang fokus pada konteks (maksimal 8 kalimat):`,
-      inputVariables: ['context', 'history', 'question']
-    });
-
-    const model = new ChatGoogleGenerativeAI({ model: 'gemini-1.5-flash-latest', apiKey: process.env.GOOGLE_API_KEY, temperature: 0.4 });
-    const prompt = await tmpl.format({
-      context: ctx,
-      history: past.map((m) => `${m.role === 'user' ? 'User' : 'Asisten'}: ${m.content}`).join('\n').slice(0, 2000),
-      question: q,
-    });
-    const res = await model.invoke([{ role: 'user', content: prompt }] as any);
-    const text = String((res as any)?.content?.[0]?.text || (res as any)?.content || '').trim().slice(0, 1200);
+    const text = String(await githubChatCompletion(messages)).trim().slice(0, 1200);
     return NextResponse.json({ answer: text });
   } catch (e) {
     console.error('reader/ask error', e);

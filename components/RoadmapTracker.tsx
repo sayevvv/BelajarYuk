@@ -338,7 +338,9 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
           {(!materialsReady && !(roadmap as any).published && !(roadmap as any).sourceId) ? (
             <button
               type="button"
+              disabled={preparing}
               onClick={async () => {
+                if (preparing) return;
                 setMenuOpen(false);
                 setPreparing(true); setPrepareError(null); setPreparePartial(false);
                 const ctrl = new AbortController(); setPrepareCtrl(ctrl);
@@ -357,7 +359,7 @@ export default function RoadmapTracker({ roadmapId }: { roadmapId: string }) {
                   setPrepareError(e.message || 'Gagal menyiapkan materi');
                 } finally { setPreparing(false); setPrepareCtrl(null); }
               }}
-              className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700"
+              className="rounded-lg px-3 py-2 text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed dark:disabled:bg-[#1a1a1a] dark:disabled:text-neutral-400"
             >Generate Materi</button>
           ) : (
             <Link href={`/dashboard/roadmaps/${roadmap.id}/read`} className="rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700">Mulai Belajar</Link>

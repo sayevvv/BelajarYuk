@@ -1,14 +1,13 @@
 // app/dashboard/settings/page.tsx
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
-import Image from "next/image";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -37,31 +36,7 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
         </div>
 
-        {/* Akun */}
-        <section className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Akun</h2>
-          {session ? (
-            <div className="mt-4 flex items-center gap-4">
-              {session.user?.image ? (
-                <Image src={session.user.image} alt={session.user.name || "User"} width={64} height={64} className="rounded-full" />
-              ) : (
-                <div className="h-16 w-16 rounded-full bg-slate-200 dark:bg-slate-700" />
-              )}
-              <div>
-                <div className="text-slate-900 dark:text-slate-100 font-semibold">{session.user?.name || "Pengguna"}</div>
-                <div className="text-slate-600 dark:text-slate-300 text-sm">{session.user?.email}</div>
-              </div>
-              <div className="ml-auto">
-                <button onClick={() => signOut({ callbackUrl: "/" })} className="rounded-lg bg-red-600 px-4 py-2 text-white font-semibold hover:bg-red-700">Keluar</button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4">
-              <p className="text-slate-600 dark:text-slate-300">Anda belum masuk.</p>
-              <Link href="/login?callbackUrl=/dashboard/settings" className="inline-flex mt-3 rounded-lg bg-blue-600 px-4 py-2 text-white font-semibold hover:bg-blue-700">Masuk</Link>
-            </div>
-          )}
-        </section>
+  {/* Akun card removed for settings simplification on this view */}
 
         {/* Tema */}
         <section className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">

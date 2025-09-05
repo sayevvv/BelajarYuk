@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/auth.config';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { githubChatCompletion } from '@/lib/ai/githubModels';
 import { assertSameOrigin, sanitizeString } from '@/lib/security';
 import { prisma } from '@/lib/prisma';
 
@@ -37,8 +37,7 @@ export async function POST(req: NextRequest) {
     const points: string[] = Array.isArray(c?.points) ? c.points.map((p: any) => sanitizeString(String(p), { maxLen: 200 })) : [];
     if (!title && !bodyText && !points.length) return NextResponse.json({ cards: [] });
 
-    const ctx = [`Judul: ${title}`, `Isi:\n${bodyText}`, points.length ? `Poin:\n- ${points.join('\n- ')}` : ''].filter(Boolean).join('\n\n');
-    const model = new ChatGoogleGenerativeAI({ model: 'gemini-1.5-flash-latest', apiKey: process.env.GOOGLE_API_KEY, temperature: 0.2 });
+  const ctx = [`Judul: ${title}`, `Isi:\n${bodyText}`, points.length ? `Poin:\n- ${points.join('\n- ')}` : ''].filter(Boolean).join('\n\n');
     const n = Math.max(1, Math.min(10, Number(limit) || 5));
     const prompt = `Buat ${n} flashcard singkat dari materi berikut. Balas HANYA JSON valid:
 {"cards": [{"front": "pertanyaan singkat (4–10 kata)", "back": "jawaban ringkas (<= 15 kata, 1 kalimat)"}]}
@@ -51,8 +50,7 @@ Aturan:
 
 MATERI:
 ${ctx}`.slice(0, 6000);
-    const res = await model.invoke([{ role: 'user', content: prompt }] as any);
-    const raw = String((res as any)?.content?.[0]?.text || (res as any)?.content || '').trim();
+  const raw = String(await githubChatCompletion([{ role: 'user', content: prompt } as any])).trim();
     let parsed: any = null;
     try { parsed = JSON.parse(raw); } catch {
       // try to extract the first JSON object/array blob

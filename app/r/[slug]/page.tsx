@@ -3,12 +3,15 @@ import SaveRoadmapButton from '@/components/SaveRoadmapButton';
 import PublicRoadmapClient from '@/components/PublicRoadmapClient';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import MobileBackBar from '@/components/MobileBackBar';
 import VerifyRoadmapButton from '@/components/VerifyRoadmapButton';
 import RatingSummary from '@/components/RatingSummary';
 import TopicChips from '@/components/TopicChips';
 import { Suspense } from 'react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth.config';
+import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 async function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
@@ -34,20 +37,24 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
   const isAdmin = (session as any)?.user?.role === 'ADMIN';
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-black">
-      <header className="p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
+      {/* Mobile top bar: back only, no sidebar/nav */}
+    <MobileBackBar title={(roadmap as any).title} subtitle={`oleh ${(roadmap as any).user?.name || 'Pengguna'}`} />
+
+      {/* Desktop header */}
+      <header className="hidden md:block p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Link href="/dashboard/browse" className="inline-flex items-center justify-center rounded-full h-9 w-9 text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-neutral-300 dark:hover:text-white dark:hover:bg-[#1a1a1a]" aria-label="Kembali">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
                 <span className="truncate">{(roadmap as any).title}</span>
                 {(roadmap as any).verified ? (
                   <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 border border-emerald-200">Dev’s Choice</span>
                 ) : null}
               </h1>
-              <div className="mt-1 text-slate-500 dark:text-slate-400 hidden sm:block">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
+              <div className="mt-1 text-slate-500 dark:text-slate-400">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
             </div>
           </div>
           <div className="mt-1 flex items-center gap-4">
@@ -62,7 +69,10 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
           </div>
         </div>
       </header>
-  <PublicRoadmapClient content={content} />
+
+      <div className="px-4 pb-8 md:px-0">
+        <PublicRoadmapClient content={content} />
+      </div>
     </div>
   );
 }

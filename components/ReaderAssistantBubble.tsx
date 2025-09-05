@@ -154,10 +154,15 @@ export default function ReaderAssistantBubble() {
                 </div>
               )}
             {history.map((m, i) => (
-              <div key={i} className={`max-w-[85%] ${m.role === 'user' ? 'ml-auto text-white bg-blue-600' : 'mr-auto bg-slate-100'} rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap`}>{m.content}</div>
+              <div
+                key={i}
+                className={`inline-block w-fit max-w-[85%] break-words ${m.role === 'user' ? 'ml-auto text-white bg-blue-600' : 'mr-auto bg-slate-100'} rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap`}
+              >
+                {m.content}
+              </div>
             ))}
             {a && history.length===0 ? (
-              <div className="mr-auto bg-slate-100 rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap">{a}</div>
+              <div className="inline-block w-fit max-w-[85%] break-words mr-auto bg-slate-100 rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap">{a}</div>
             ) : null}
             </div>
             <div className="p-3 border-t border-slate-200 bg-white">
@@ -239,10 +244,15 @@ export default function ReaderAssistantBubble() {
                 </div>
               )}
               {history.map((m, i) => (
-                <div key={i} className={`max-w-[85%] ${m.role === 'user' ? 'ml-auto text-white bg-blue-600' : 'mr-auto bg-slate-100'} rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap`}>{m.content}</div>
+                <div
+                  key={i}
+                  className={`inline-block w-fit max-w-[85%] break-words ${m.role === 'user' ? 'ml-auto text-white bg-blue-600' : 'mr-auto bg-slate-100'} rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap`}
+                >
+                  {m.content}
+                </div>
               ))}
               {a && history.length === 0 ? (
-                <div className="mr-auto bg-slate-100 rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap">{a}</div>
+                <div className="inline-block w-fit max-w-[85%] break-words mr-auto bg-slate-100 rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap">{a}</div>
               ) : null}
             </div>
             <div className="p-3 border-t border-slate-200">

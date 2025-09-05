@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/auth.config';
 import { prisma } from '@/lib/prisma';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { PromptTemplate } from '@langchain/core/prompts';
+import { githubChatCompletion } from '@/lib/ai/githubModels';
 import { assertSameOrigin } from '@/lib/security';
 
 export async function GET(req: NextRequest, ctx: any) {
@@ -31,7 +31,6 @@ export async function GET(req: NextRequest, ctx: any) {
   });
   const context = contextParts.join('\n\n---\n\n');
 
-  const model = new ChatGoogleGenerativeAI({ model: 'gemini-1.5-flash-latest', apiKey: process.env.GOOGLE_API_KEY, temperature: 0.4 });
   const prompt = new PromptTemplate({
     template: `Anda membuat 5 soal pilihan ganda BERDASARKAN KONTEN DI BAWAH INI SAJA. Jangan gunakan pengetahuan luar konteks.
 Kembalikan HANYA JSON valid dalam format:
@@ -50,8 +49,7 @@ Konteks Materi:
   });
   const p = await prompt.format({ context });
   try {
-    const res = await model.invoke([{ role: 'user', content: p }] as any);
-  const raw: string = (res as any)?.content?.[0]?.text || (res as any)?.content || '';
+  const raw: string = String(await githubChatCompletion([{ role: 'user', content: p } as any])).trim();
   let text = String(raw).trim();
     // strip markdown fences if present
     if (text.startsWith('```')) {
