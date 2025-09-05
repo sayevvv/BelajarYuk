@@ -86,12 +86,12 @@ export default async function LandingPage() {
 
   const hasLatest = Array.isArray(latest) && latest.length > 0;
   const placeholders = [
-    { id: 'p1', slug: 'sample-web-dev', title: 'Roadmap Pengembangan Web Pemula', user: { name: 'Komunitas' } },
-    { id: 'p2', slug: 'sample-data-science', title: 'Dasar-dasar Data Science', user: { name: 'Komunitas' } },
-    { id: 'p3', slug: 'sample-mobile', title: 'Dasar Pengembangan Aplikasi Mobile', user: { name: 'Komunitas' } },
-    { id: 'p4', slug: 'sample-ui-ux', title: 'Jalur Awal Desain UI/UX', user: { name: 'Komunitas' } },
-    { id: 'p5', slug: 'sample-devops', title: 'Esensial DevOps', user: { name: 'Komunitas' } },
-    { id: 'p6', slug: 'sample-ml', title: 'Pengantar Machine Learning', user: { name: 'Komunitas' } },
+    { id: 'p1', slug: 'sample-web-dev', title: 'Roadmap Pengembangan Web Pemula', user: { name: 'Nadia Pratama' } },
+    { id: 'p2', slug: 'sample-data-science', title: 'Dasar-dasar Data Science', user: { name: 'Rizky Saputra' } },
+    { id: 'p3', slug: 'sample-mobile', title: 'Dasar Pengembangan Aplikasi Mobile', user: { name: 'Intan Maharani' } },
+    { id: 'p4', slug: 'sample-ui-ux', title: 'Jalur Awal Desain UI/UX', user: { name: 'Bagas Wicaksono' } },
+    { id: 'p5', slug: 'sample-devops', title: 'Esensial DevOps', user: { name: 'Ayu Lestari' } },
+    { id: 'p6', slug: 'sample-ml', title: 'Pengantar Machine Learning', user: { name: 'Dimas Prakoso' } },
   ] as any[];
   const marqueeItems = hasLatest ? latest : placeholders;
 
@@ -202,9 +202,7 @@ export default async function LandingPage() {
                       >
                         <span className="font-semibold truncate max-w-[16rem]">{r.title}</span>
                         <span className="text-xs text-slate-500 dark:text-neutral-400">• oleh {r.user?.name ?? 'Komunitas'}</span>
-                        {!hasLatest && (
-                          <span className="ml-1 rounded bg-slate-200 dark:bg-[#2a2a2a] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-700 dark:text-neutral-200">Contoh</span>
-                        )}
+                        {/* Placeholder badge removed intentionally to mimic real items */}
                       </Link>
                     </li>
                   ))}
@@ -218,9 +216,7 @@ export default async function LandingPage() {
                       >
                         <span className="font-semibold truncate max-w-[16rem]">{r.title}</span>
                         <span className="text-xs text-slate-500 dark:text-neutral-400">• oleh {r.user?.name ?? 'Komunitas'}</span>
-                        {!hasLatest && (
-                          <span className="ml-1 rounded bg-slate-200 dark:bg-[#2a2a2a] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-700 dark:text-neutral-200">Contoh</span>
-                        )}
+                        {/* Placeholder badge removed intentionally to mimic real items */}
                       </Link>
                     </li>
                   ))}
@@ -230,16 +226,7 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* Metrics */}
-        <section id="metrics" className="py-16 bg-orange-50 dark:!bg-[#0b0b0b] transition-colors">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              <MetricCard number="XX+" label="Pengguna Aktif" delay={0} />
-              <MetricCard number="XXX+" label="Jalur Belajar" delay={100} />
-              <MetricCard number="XX%" label="Tingkat Keberhasilan" delay={200} />
-            </div>
-          </div>
-        </section>
+  {/* Metrics removed as requested */}
 
         {/* Features */}
         <section id="features" className="py-24 sm:py-32 scroll-mt-28">
