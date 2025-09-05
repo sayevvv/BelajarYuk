@@ -149,6 +149,20 @@ export default function NewRoadmapPage() {
 
   const isSessionLoading = status === "loading";
 
+  // Client-only redirect to mobile-optimized page on small viewports
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const redirectIfMobile = () => {
+      try {
+        if (window.innerWidth < 1024) {
+          const qs = window.location.search || '';
+          window.location.replace(`/dashboard/new/mobile${qs}`);
+        }
+      } catch {}
+    };
+    redirectIfMobile();
+  }, []);
+
   // Cross-tab generation gate helpers
   const GEN_TTL_MS = 10 * 60 * 1000; // 10 minutes TTL to clear stale locks
   const getGenKey = () => `gen:roadmap:${(session as any)?.user?.id || 'anon'}`;
@@ -598,8 +612,8 @@ export default function NewRoadmapPage() {
     isSessionLoading ? (
       <div className="flex h-full items-center justify-center"><p>Loading session...</p></div>
     ) : (
-  <div className="flex h-full">
-  <div className="w-[400px] bg-white dark:bg-black p-8 flex flex-col flex-shrink-0 min-h-0 border-r border-slate-200 dark:border-slate-800">
+  <div className="flex h-full flex-col lg:flex-row">
+  <div className="w-full lg:w-[400px] bg-white dark:bg-black p-4 sm:p-6 lg:p-8 flex flex-col flex-shrink-0 lg:min-h-0 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800">
         {!roadmapData || newFormOpen ? (
           <>
             <header className={"flex items-center justify-between gap-3"}>
@@ -801,7 +815,7 @@ export default function NewRoadmapPage() {
           </>
         )}
       </div>
-  <div className="relative flex-grow bg-slate-50 dark:bg-black flex flex-col">
+  <div className="relative flex-grow min-h-[50vh] bg-slate-50 dark:bg-black flex flex-col">
         {/* Fixed title header after roadmap exists */}
         {roadmapData && (
           <div className="sticky top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur border-b border-slate-200 dark:border-slate-800">
@@ -810,11 +824,11 @@ export default function NewRoadmapPage() {
                 <div className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Judul Roadmap</div>
                 <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100">{roadmapTitle || activeTopic}</h2>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 px-2 py-1.5 sm:px-3 sm:py-2 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
                   title="Batalkan"
                 >
                   Batal
@@ -846,7 +860,7 @@ export default function NewRoadmapPage() {
                   type="button"
                   onClick={handleSaveRoadmap}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-3 py-2 text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 text-white px-2 py-1.5 sm:px-3 sm:py-2 text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
                   title={saving ? 'Menyimpan…' : 'Simpan Roadmap'}
                 >
                   {saving ? 'Menyimpan…' : 'Simpan'}

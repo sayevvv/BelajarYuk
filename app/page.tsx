@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Grid3X3, BookOpen, BarChart3, Users, Target, Clock3, Share2, Shield, Sparkles, CheckCircle } from 'lucide-react';
-import { Space_Mono } from 'next/font/google';
+import { Space_Mono, Space_Grotesk } from 'next/font/google';
 // import { prisma } from '@/lib/prisma';
 import LandingHeader from '@/components/LandingHeader';
 import { MacbookScroll } from '@/components/ui/macbook-scroll';
@@ -15,6 +15,12 @@ const spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ['400', '700'],
   variable: '--font-space-mono',
+});
+
+// Space Grotesk for mobile landing hero
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
 });
 
 // Metric display component following Swiss design principles
@@ -116,8 +122,38 @@ export default async function LandingPage() {
       <LandingHeader />
 
       <main className="pt-16">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden light:bg-white dark:bg-black">
+        {/* Hero Section - Mobile: Full screen, Desktop: MacbookScroll */}
+        
+        {/* Mobile Hero: Full screen height with centered content */}
+        <section className="block md:hidden relative overflow-hidden light:bg-white dark:bg-black min-h-screen">
+          <div className={`h-screen flex flex-col justify-center items-start max-w-7xl mx-auto px-6 ${spaceGrotesk.className}`}>
+            <div className="text-slate-900 dark:text-white">
+              <span className="block text-5xl font-bold tracking-tight leading-tight">
+                Belajar Lebih{' '}
+                <span className="inline-block bg-gradient-to-r from-[#4B85B8] to-[#FCA142] bg-clip-text text-transparent">Lanjut</span>,
+              </span>
+              <span className="block text-5xl font-bold tracking-tight leading-tight mt-2">
+                Lebih{' '}
+                <span className="inline-block bg-gradient-to-r from-[#4B85B8] to-[#FCA142] bg-clip-text text-transparent">Jauh</span>
+              </span>
+              <span className="block mt-6 text-lg font-normal tracking-wide text-slate-600 dark:text-slate-300 max-w-md">
+                Bentuk Rencana Belajarmu Sendiri.
+              </span>
+            </div>
+            <div className="mt-8 flex flex-col items-stretch gap-4 w-full max-w-sm">
+              <StartLearningCTA className="inline-flex items-center justify-center gap-3 rounded-xl bg-[#4B85B8] px-6 py-3 text-lg font-medium text-white hover:opacity-85 transition-colors" />
+              <a
+                href="#features"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 px-6 py-3 text-lg font-medium text-[#4B85B8] hover:bg-orange-100 dark:text-[#FCA142] dark:hover:bg-white/5 transition-colors"
+              >
+                Pelajari Lebih Lanjut
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* Desktop Hero: MacbookScroll */}
+        <section className="hidden md:block relative overflow-hidden light:bg-white dark:bg-black">
           <MacbookScroll
             title={
               <span className="text-slate-900 dark:text-white">
