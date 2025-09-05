@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef, FormEvent, Fragment } from "react";
+import { useState, useEffect, FormEvent, Fragment } from "react";
 import { useToast } from '@/components/ui/ToastProvider';
 import { z } from "zod";
 import RoadmapGraph from "@/components/RoadmapGraph";
@@ -149,6 +149,9 @@ export default function NewRoadmapPage() {
 
   const isSessionLoading = status === "loading";
 
+  // Draft cache key per-user (or anon)
+  const getDraftKey = () => `draft:roadmap:new:${(session as any)?.user?.id || 'anon'}`;
+
   // Client-only redirect to mobile-optimized page on small viewports
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -250,8 +253,9 @@ export default function NewRoadmapPage() {
     setIsLoading(true);
   // Mark local generation lock
   try { localStorage.setItem(getGenKey(), String(Date.now())); } catch {}
-    setError(null);
-    setRoadmapData(null);
+  setError(null);
+  // Do not wipe draft cache on state clear; keep UI state empty while new gen runs
+  setRoadmapData(null);
   setIsSaved(false);
     const topicToSend = (promptMode === 'simple' ? simpleDetails : topic).trim();
     const details = (promptMode === 'advanced')
@@ -336,8 +340,10 @@ export default function NewRoadmapPage() {
   const response = await fetch('/api/roadmaps/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: roadmapTitle || activeTopic, content: roadmapData, }), });
       if (!response.ok) throw new Error("Gagal menyimpan roadmap.");
   const saved = await response.json();
-      show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan!' });
+  show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan!' });
       setIsSaved(true);
+  // Remove cached draft after successful save
+  try { localStorage.removeItem(getDraftKey()); } catch {}
       // Klasifikasi topik di background
       try {
         const payload = {
@@ -439,20 +445,6 @@ export default function NewRoadmapPage() {
 
   // no explicit startNewRoadmap; use icon toggle to open the initial form
 
-  // Unsaved changes guard: beforeunload + internal navigation interception
-  const hasUnsaved = !isSaved && !saving && !!(
-    // inputs typed or options changed
-    simpleDetails.trim() || topic.trim() || finalGoal.trim() || startDate || endDate ||
-    promptMode === 'advanced' || availableDays !== 'all' || dailyDuration !== 2 ||
-    // has roadmap content not saved in this session yet
-    roadmapData
-  );
-
-  const currentUrlRef = useRef<string>('');
-  useEffect(() => {
-    currentUrlRef.current = window.location.href;
-  }, []);
-
   // Prefill form from URL params (support simple/advanced coming from HomeStartBox)
   useEffect(() => {
     try {
@@ -520,56 +512,46 @@ export default function NewRoadmapPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [simpleDetails, topic, finalGoal, enableTimeOptions, availableDays, dailyDuration, startDate, endDate]);
 
+  // Remove unsaved-progress warnings: rely on local draft cache instead
+
+  // Draft cache: restore on load (per user) and persist on changes
   useEffect(() => {
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!hasUnsaved) return;
-      e.preventDefault();
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', onBeforeUnload);
-
-    // Intercept anchor clicks for client-side navigations
-    const onDocumentClick = (e: MouseEvent) => {
-      if (!hasUnsaved) return;
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      const anchor = target.closest('a') as HTMLAnchorElement | null;
-      if (!anchor) return;
-      if (anchor.target && anchor.target !== '_self') return; // allow new tab/window
-      const href = anchor.getAttribute('href') || '';
-      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
-      // Same-page Link with no real navigation
-      const url = new URL(href, window.location.origin);
-      const same = url.pathname === window.location.pathname && url.search === window.location.search && url.hash === window.location.hash;
-      if (same) return;
-  const ok = saving ? true : window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
-      if (!ok) {
-        e.preventDefault();
-        e.stopPropagation();
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(getDraftKey());
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      const parsed = roadmapSchema.safeParse(draft?.roadmapData);
+      if (parsed.success) {
+        setRoadmapData(parsed.data);
+        setRoadmapTitle(typeof draft?.roadmapTitle === 'string' ? draft.roadmapTitle : '');
+        setActiveTopic(typeof draft?.activeTopic === 'string' ? draft.activeTopic : '');
+        setActivePromptMode(draft?.activePromptMode === 'advanced' ? 'advanced' : 'simple');
+        setShowTextView(Boolean(draft?.showTextView));
+        setIsSaved(false);
       }
-    };
-    document.addEventListener('click', onDocumentClick, true);
+    } catch {}
+  // re-run when session becomes available so key can change
+  }, [status]);
 
-    // Handle browser back/forward
-  const onPopState = () => {
-      if (!hasUnsaved) return;
-      const ok = saving ? true : window.confirm('Perubahan belum disimpan. Tinggalkan halaman? Progress Anda akan hilang.');
-      if (!ok) {
-        // revert to current URL
-        history.pushState(null, '', currentUrlRef.current);
-      } else {
-        // allow: update ref to new URL
-        currentUrlRef.current = window.location.href;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (roadmapData) {
+        const draft = {
+          v: 1,
+          at: Date.now(),
+          roadmapData,
+          roadmapTitle,
+          activeTopic,
+          activePromptMode,
+          showTextView,
+        };
+        localStorage.setItem(getDraftKey(), JSON.stringify(draft));
       }
-    };
-    window.addEventListener('popstate', onPopState);
-
-    return () => {
-      window.removeEventListener('beforeunload', onBeforeUnload);
-      document.removeEventListener('click', onDocumentClick, true);
-      window.removeEventListener('popstate', onPopState);
-    };
-  }, [hasUnsaved]);
+      // Do not clear when roadmapData is null to keep last good draft
+    } catch {}
+  }, [roadmapData, roadmapTitle, activeTopic, activePromptMode, showTextView, status]);
 
   // Text View component to render roadmap as clickable list
   const RoadmapTextView = ({ data, onClick }: { data: RoadmapData; onClick: (m: Milestone) => void }) => (

@@ -56,6 +56,9 @@ export default function NewRoadmapMobilePage() {
 
   const isSessionLoading = status === "loading";
 
+  // Draft cache key per-user (or anon)
+  const getDraftKey = () => `draft:roadmap:new:${(session as any)?.user?.id || 'anon'}`;
+
   // When on large screens, send users back to desktop page
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -69,6 +72,42 @@ export default function NewRoadmapMobilePage() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // Draft cache: restore on load (per user) and persist on changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(getDraftKey());
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      const parsed = roadmapSchema.safeParse(draft?.roadmapData);
+      if (parsed.success) {
+        setRoadmapData(parsed.data);
+        setRoadmapTitle(typeof draft?.roadmapTitle === 'string' ? draft.roadmapTitle : '');
+        setActiveTopic(typeof draft?.activeTopic === 'string' ? draft.activeTopic : '');
+        setActivePromptMode(draft?.activePromptMode === 'advanced' ? 'advanced' : 'simple');
+        setShowTextView(Boolean(draft?.showTextView));
+      }
+    } catch {}
+  }, [status]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (roadmapData) {
+        const draft = {
+          v: 1,
+          at: Date.now(),
+          roadmapData,
+          roadmapTitle,
+          activeTopic,
+          activePromptMode,
+          showTextView,
+        };
+        localStorage.setItem(getDraftKey(), JSON.stringify(draft));
+      }
+    } catch {}
+  }, [roadmapData, roadmapTitle, activeTopic, activePromptMode, showTextView, status]);
 
   // Submit
   const handleSubmit = async (e: FormEvent) => {
@@ -147,6 +186,7 @@ export default function NewRoadmapMobilePage() {
       const saved = await response.json();
       show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan!' });
       // classify background
+  try { localStorage.removeItem(getDraftKey()); } catch {}
       try {
         const payload = { title: roadmapTitle || activeTopic || 'Roadmap', summary: '', milestones: Array.isArray(roadmapData?.milestones) ? roadmapData!.milestones.map(m => m.topic) : [] };
         if (navigator.sendBeacon) {
