@@ -211,16 +211,16 @@ export default async function ReadMaterialPage(props: any) {
         )}
         </main>
 
-  {/* Right: Chatbot panel */}
-  <div className="hidden xl:block xl:w-[22rem] xl:flex-none">
-          <ReaderAssistantBubble />
-        </div>
+  {/* Right rail (reserved width on xl to balance layout) */}
+  <div className="hidden xl:block xl:w-[22rem] xl:flex-none" />
       </div>
     <ReaderProgressClient roadmapId={roadmap.id} m={m} s={s} />
   {/* Ensure scroll resets to top on subbab change */}
   <ReaderScrollReset deps={[m, s]} behavior="smooth" />
   {/* Suppress noisy errors from browser extensions like QuillBot */}
   <ThirdPartyNoiseGuard />
+  {/* Assistant bubble mounted globally so mobile gets floating launcher and overlay */}
+  <ReaderAssistantBubble />
   {/* Encourage rating only when this roadmap comes from a public source (hide for self-generated) */}
   { (roadmap as any).sourceId ? (
     <PostStudyRatePrompt sourceRoadmapId={(roadmap as any).sourceId} sourceSlug={(roadmap as any).slug} />

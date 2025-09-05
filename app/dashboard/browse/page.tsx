@@ -59,17 +59,18 @@ export default async function BrowsePage({ searchParams }: { searchParams: Promi
           <input type="hidden" name="pageSize" value={pageSize} />
         </form>
       </header>
-      <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
         {data?.items?.map((item: any) => {
           const own = s?.user?.id && s.user.id === item.userId;
-      return (
-            <div key={item.id}>
+  return (
+    <div key={item.id} className="h-full">
               <RoadmapCard
                 item={item}
                 hideInlineTopics={false}
                 hideRatings={own}
                 own={!!own}
-                showBottomChip
+        showBottomChip
+        bottomMetaAlign
               />
             </div>
           );

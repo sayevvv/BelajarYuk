@@ -59,27 +59,29 @@ export default function RoadmapCard({
     containerPad = compact ? 'pb-12' : 'pb-16';
   }
   return (
-    <Link href={href} className={`relative block rounded-2xl border border-slate-200 hover:border-blue-300 transition-all bg-white dark:bg-[#0b0b0b] p-4 ${containerPad}`}>
-      <div className="flex items-start justify-between">
+    <Link href={href} className={`relative block h-full rounded-2xl border border-slate-200 hover:border-blue-300 transition-all bg-white dark:bg-[#0b0b0b] p-4 ${containerPad}`}>
+      <div className="flex items-start justify-between min-h-[48px]">
         <div className="min-w-0">
           <h3 className="text-[15px] sm:text-base font-semibold text-slate-900 truncate">{item.title}</h3>
-          {own ? (
-            <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[12px] text-slate-700 dark:bg-white/5 dark:border-white/10 dark:text-slate-200">
-              <span className="truncate">Made by you</span>
-            </div>
-          ) : authorName ? (
-            <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[12px] text-slate-700 dark:bg-white/5 dark:border-white/10 dark:text-slate-200">
-              <span className="inline-flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-[10px] text-slate-600">
-                {authorImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={authorImage} alt={authorName} className="h-full w-full object-cover" />
-                ) : (
-                  <UserIcon className="h-3.5 w-3.5" />
-                )}
-              </span>
-              <span className="truncate">oleh {authorName}</span>
-            </div>
-          ) : null}
+          <div className="h-6">
+            {own ? (
+              <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[12px] text-slate-700 dark:bg-white/5 dark:border-white/10 dark:text-slate-200">
+                <span className="truncate">Made by you</span>
+              </div>
+            ) : authorName ? (
+              <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[12px] text-slate-700 dark:bg-white/5 dark:border-white/10 dark:text-slate-200">
+                <span className="inline-flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-slate-200 text-[10px] text-slate-600">
+                  {authorImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={authorImage} alt={authorName} className="h-full w-full object-cover" />
+                  ) : (
+                    <UserIcon className="h-3.5 w-3.5" />
+                  )}
+                </span>
+                <span className="truncate">oleh {authorName}</span>
+              </div>
+            ) : null}
+          </div>
           {!hideInlineTopics && !bottomMetaAlign && Array.isArray(item.topics) && item.topics.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-2">
               {item.topics.slice(0, 3).map((t) => (
@@ -94,9 +96,11 @@ export default function RoadmapCard({
             </div>
           ) : null}
         </div>
-        {item.verified ? (
-          <span className="ml-3 inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-[11px] px-2 py-0.5 border border-emerald-200">Dev’s Choice</span>
-        ) : null}
+        <div className="min-h-[20px] ml-3">
+          {item.verified ? (
+            <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-[11px] px-2 py-0.5 border border-emerald-200">Dev’s Choice</span>
+          ) : null}
+        </div>
       </div>
       {/* Middle meta row (weeks + ratings) unless we align at bottom */}
       {!bottomMetaAlign && (

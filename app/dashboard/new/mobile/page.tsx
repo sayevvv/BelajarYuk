@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, FormEvent, Fragment } from "react
 import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { Transition } from "@headlessui/react";
-import { GitBranch, LayoutList, Sparkles } from "lucide-react";
+import { GitBranch, LayoutList, Sparkles, FilePlus2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RoadmapGraph from "@/components/RoadmapGraph";
 import RoadmapPlaceholder from "@/components/RoadmapPlaceholder";
@@ -53,8 +53,17 @@ export default function NewRoadmapMobilePage() {
   const [activeTopic, setActiveTopic] = useState("");
   const [showTextView, setShowTextView] = useState(false);
   const [saving, setSaving] = useState(false);
+  // FAB actions & AI edit flow
+  const [fabOpen, setFabOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editInstruction, setEditInstruction] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const isSessionLoading = status === "loading";
+
+  // Draft cache key per-user (or anon)
+  const getDraftKey = () => `draft:roadmap:new:${(session as any)?.user?.id || 'anon'}`;
 
   // When on large screens, send users back to desktop page
   useEffect(() => {
@@ -69,6 +78,46 @@ export default function NewRoadmapMobilePage() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // Draft cache: restore once (avoid overriding a fresh generation)
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    if (typeof window === 'undefined') return;
+    if (isLoading || roadmapData) return;
+    try {
+      const raw = localStorage.getItem(getDraftKey());
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      const parsed = roadmapSchema.safeParse(draft?.roadmapData);
+      if (parsed.success) {
+        setRoadmapData(parsed.data);
+        setRoadmapTitle(typeof draft?.roadmapTitle === 'string' ? draft.roadmapTitle : '');
+        setActiveTopic(typeof draft?.activeTopic === 'string' ? draft.activeTopic : '');
+        setActivePromptMode(draft?.activePromptMode === 'advanced' ? 'advanced' : 'simple');
+        setShowTextView(Boolean(draft?.showTextView));
+        restoredRef.current = true;
+      }
+    } catch {}
+  }, [status, isLoading, roadmapData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (roadmapData) {
+        const draft = {
+          v: 1,
+          at: Date.now(),
+          roadmapData,
+          roadmapTitle,
+          activeTopic,
+          activePromptMode,
+          showTextView,
+        };
+        localStorage.setItem(getDraftKey(), JSON.stringify(draft));
+      }
+    } catch {}
+  }, [roadmapData, roadmapTitle, activeTopic, activePromptMode, showTextView, status]);
 
   // Submit
   const handleSubmit = async (e: FormEvent) => {
@@ -147,6 +196,7 @@ export default function NewRoadmapMobilePage() {
       const saved = await response.json();
       show({ type: 'success', title: 'Tersimpan', message: 'Roadmap berhasil disimpan!' });
       // classify background
+  try { localStorage.removeItem(getDraftKey()); } catch {}
       try {
         const payload = { title: roadmapTitle || activeTopic || 'Roadmap', summary: '', milestones: Array.isArray(roadmapData?.milestones) ? roadmapData!.milestones.map(m => m.topic) : [] };
         if (navigator.sendBeacon) {
@@ -161,6 +211,41 @@ export default function NewRoadmapMobilePage() {
       setError(err.message || 'Terjadi kesalahan.');
       show({ type: 'error', title: 'Gagal Menyimpan', message: err.message || 'Terjadi kesalahan.' });
     } finally { setSaving(false); }
+  };
+
+  // Submit AI edit (single-instruction flow)
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!roadmapData || !editInstruction.trim()) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      const res = await fetch('/api/roadmaps/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current: roadmapData,
+          instruction: editInstruction.trim(),
+          promptMode: 'simple',
+          constraints: undefined,
+        }),
+      });
+      if (!res.ok) throw new Error('Gagal mengedit roadmap');
+      const data = await res.json();
+      const parsed = roadmapSchema.safeParse(data.updated);
+      if (parsed.success) {
+        setRoadmapData(parsed.data);
+        setEditOpen(false);
+        setEditInstruction("");
+        try { show({ type: 'success', title: 'Perubahan Diterapkan', message: data.summary || 'Roadmap diperbarui.' }); } catch {}
+      } else {
+        setEditError('Perubahan tidak dapat diterapkan (validasi gagal).');
+      }
+    } catch (err: any) {
+      setEditError(err.message || 'Terjadi kesalahan.');
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const FormPanel = (
@@ -347,9 +432,9 @@ export default function NewRoadmapMobilePage() {
           ) : (
             <div className="flex flex-col min-h-[100svh]">
               {HeaderWithActions}
-              <div className={cn("relative flex-1 overflow-hidden bg-slate-50 dark:bg-black")}> 
+              <div className={cn("relative flex-1 min-h-0 overflow-hidden bg-slate-50 dark:bg-black")}> 
                 {showTextView ? (
-                  <div className="h-full overflow-y-auto p-4">
+                  <div className="absolute inset-0 overflow-y-auto p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
                     <ol className="space-y-4">
                       {roadmapData.milestones.map((m, idx) => (
                         <li key={`${idx}-${m.topic}`} className="rounded-lg border border-slate-200 bg-white p-4">
@@ -367,9 +452,68 @@ export default function NewRoadmapMobilePage() {
                     </ol>
                   </div>
                 ) : (
-                  <RoadmapGraph data={roadmapData} onNodeClick={()=>{}} promptMode={activePromptMode} />
+                  <div className="absolute inset-0">
+                    <RoadmapGraph data={roadmapData} onNodeClick={()=>{}} promptMode={activePromptMode} />
+                  </div>
                 )}
               </div>
+              {/* Floating actions button */}
+              {roadmapData && !editOpen && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setFabOpen((v)=>!v)}
+                    className="fixed right-4 z-[45] inline-flex items-center justify-center rounded-full shadow-lg bg-blue-600 text-white h-14 w-14 active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    style={{ bottom: 'calc(96px + env(safe-area-inset-bottom))' }}
+                    aria-haspopup="menu"
+                    aria-expanded={fabOpen}
+                    aria-label="Aksi Roadmap"
+                  >
+                    <Sparkles className="h-6 w-6" />
+                  </button>
+                  <Transition appear show={fabOpen} as={Fragment}>
+                    <div className="fixed inset-x-0 z-[44] pointer-events-none" style={{ bottom: 'calc(148px + env(safe-area-inset-bottom))' }}>
+                      <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-150"
+                        enterFrom="opacity-0 translate-y-2"
+                        enterTo="opacity-100 translate-y-0"
+                        leave="ease-in duration-100"
+                        leaveFrom="opacity-100 translate-y-0"
+                        leaveTo="opacity-0 translate-y-2"
+                      >
+                        <div className="mx-auto max-w-3xl px-4 pointer-events-auto">
+                          <div className="ml-auto w-[min(320px,90%)] rounded-2xl border border-slate-200 dark:border-[#2a2a2a] bg-white dark:bg-[#0f0f0f] shadow-xl overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => { setFabOpen(false); setEditOpen(true); setEditInstruction(''); setEditError(null); }}
+                              className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-[#151515]"
+                            >
+                              <Sparkles className="h-5 w-5 text-blue-600" />
+                              <div>
+                                <div className="text-sm font-semibold">Edit dengan AI</div>
+                                <div className="text-xs text-slate-500">Berikan instruksi singkat untuk memodifikasi roadmap.</div>
+                              </div>
+                            </button>
+                            <div className="h-px bg-slate-200 dark:bg-[#2a2a2a]" />
+                            <button
+                              type="button"
+                              onClick={() => { setFabOpen(false); setRoadmapData(null); setRoadmapTitle(''); setActiveTopic(''); setActivePromptMode('simple'); }}
+                              className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-[#151515]"
+                            >
+                              <FilePlus2 className="h-5 w-5 text-slate-700" />
+                              <div>
+                                <div className="text-sm font-semibold">Buat Baru</div>
+                                <div className="text-xs text-slate-500">Mulai dari formulir untuk membuat roadmap baru.</div>
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      </Transition.Child>
+                    </div>
+                  </Transition>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -394,6 +538,44 @@ export default function NewRoadmapMobilePage() {
               <div className="p-3 border-t border-slate-200 dark:border-[#1f1f1f] flex justify-end">
                 <button type="button" onClick={() => setModelModalOpen(false)} className="px-3 py-1.5 text-sm rounded-md bg-slate-100 dark:bg-[#151515] hover:bg-slate-200 dark:hover:bg-[#1a1a1a]">Tutup</button>
               </div>
+            </div>
+          </Transition.Child>
+        </div>
+      </Transition>
+
+      {/* AI Edit full-screen flow */}
+      <Transition appear show={editOpen} as={Fragment}>
+        <div className="fixed inset-0 z-50">
+          <Transition.Child as={Fragment} enter="ease-out duration-150" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
+            <div className="absolute inset-0 bg-black/40" onClick={() => (!editLoading ? setEditOpen(false) : null)} />
+          </Transition.Child>
+          <Transition.Child as={Fragment} enter="ease-out duration-150" enterFrom="opacity-0 translate-y-2" enterTo="opacity-100 translate-y-0" leave="ease-in duration-100" leaveFrom="opacity-100 translate-y-0" leaveTo="opacity-0 translate-y-2">
+            <div className="absolute inset-x-0 bottom-0 top-0 bg-white dark:bg-black rounded-t-2xl sm:rounded-none sm:top-0">
+              <div className="sticky top-0 z-10 px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-black/80 backdrop-blur flex items-center justify-between">
+                <div className="text-base font-semibold">Edit dengan AI</div>
+                <button type="button" onClick={() => setEditOpen(false)} disabled={editLoading} className="text-sm px-3 py-1.5 rounded-md bg-slate-100 dark:bg-[#151515] hover:bg-slate-200 disabled:opacity-50">Tutup</button>
+              </div>
+              <form onSubmit={handleEditSubmit} className="p-4 space-y-4">
+                <div>
+                  <label htmlFor="ai-instruction" className="block text-sm font-medium text-slate-700 mb-1.5">Instruksi</label>
+                  <textarea id="ai-instruction" value={editInstruction} onChange={(e)=>setEditInstruction(e.target.value)} placeholder="Contoh: Ringkas jadi 6 minggu dan tambah materi interview." className="w-full h-28 px-3 py-2 border rounded-lg shadow-sm border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                </div>
+                {editError && (
+                  <div className="text-sm text-red-700 bg-red-100 border border-red-200 rounded-md px-3 py-2">{editError}</div>
+                )}
+                <div className="pt-2">
+                  <button type="submit" disabled={editLoading || !editInstruction.trim()} className="w-full px-4 py-3 font-semibold text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60">
+                    {editLoading ? 'Mengedit…' : 'Terapkan Edit'}
+                  </button>
+                </div>
+              </form>
+              {editLoading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-black/60">
+                  <div className="w-full max-w-sm px-4">
+                    <RoadmapPlaceholder isLoading={true} />
+                  </div>
+                </div>
+              )}
             </div>
           </Transition.Child>
         </div>
