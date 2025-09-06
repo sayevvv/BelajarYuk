@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export const revalidate = 60; // seconds
+export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest, ctx: any) {
   try {
@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, ctx: any) {
       (roadmap as any).topics = rows.filter((r: any) => r.topic).map((r: any) => ({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary }));
     } catch {}
     return NextResponse.json(roadmap, {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+      headers: { 'Cache-Control': 'no-store' },
     });
   } catch {
     return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });

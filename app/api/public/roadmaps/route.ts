@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Enable ISR for this route handler
-export const revalidate = 60; // seconds
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
@@ -53,11 +52,11 @@ export async function GET(req: NextRequest) {
 
     const totalPages = Math.max(Math.ceil(total / pageSize), 1);
   return NextResponse.json({ items: itemsWithTopics, total, page, pageSize, totalPages }, {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+      headers: { 'Cache-Control': 'no-store' },
     });
   } catch {
     return NextResponse.json({ items: [], total: 0, page: 1, pageSize: 12, totalPages: 1 }, {
-      headers: { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=60' },
+      headers: { 'Cache-Control': 'no-store' },
     });
   }
 }
