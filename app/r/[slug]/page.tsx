@@ -14,6 +14,13 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 async function getBaseUrl() {
+  // Prefer current request host to avoid env/domain mismatches in production
+  try {
+  const h = await headers();
+    const proto = h.get('x-forwarded-proto') || 'https';
+    const host = h.get('x-forwarded-host') || h.get('host');
+    if (host) return `${proto}://${host}`;
+  } catch {}
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return 'http://localhost:3000';
