@@ -29,6 +29,8 @@ async function getBaseUrl() {
 async function getData(slug: string) {
   const base = await getBaseUrl();
   const res = await fetch(`${base}/api/public/roadmaps/${slug}`, {
+    // Avoid stale caches on preview/dev; keep tag-based revalidation for prod
+    cache: process.env.VERCEL_ENV === 'production' ? 'force-cache' : 'no-store',
     next: { tags: [`public-roadmap:${slug}`] },
   });
   if (!res.ok) return null;
