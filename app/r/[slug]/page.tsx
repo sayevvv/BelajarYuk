@@ -48,6 +48,29 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
       {/* Mobile top bar: back only, no sidebar/nav */}
     <MobileBackBar title={(roadmap as any).title} subtitle={`oleh ${(roadmap as any).user?.name || 'Pengguna'}`} />
 
+      {/* Mobile info/actions */}
+      <section className="md:hidden px-4 pt-3 pb-2 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs text-slate-500 dark:text-slate-400 truncate">oleh {(roadmap as any).user?.name || 'Pengguna'}</div>
+          </div>
+          {(roadmap as any).published && (roadmap as any).user?.id !== (session as any)?.user?.id ? (
+            <SaveRoadmapButton roadmapId={(roadmap as any).id} />
+          ) : null}
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <RatingSummary roadmapId={(roadmap as any).id} canRate={(roadmap as any).published && (roadmap as any).user?.id !== (session as any)?.user?.id} />
+          {(roadmap as any).verified ? (
+            <span className="ml-3 inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 text-[11px] px-2 py-0.5 border border-emerald-200 whitespace-nowrap">Dev’s Choice</span>
+          ) : null}
+        </div>
+        <div className="mt-2 -mx-1 overflow-x-auto">
+          <div className="px-1 min-w-full">
+            <TopicChips roadmapId={(roadmap as any).id} />
+          </div>
+        </div>
+      </section>
+
       {/* Desktop header */}
       <header className="hidden md:block p-8 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10">
         <div className="flex items-start justify-between gap-4">
@@ -78,7 +101,7 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
         </div>
       </header>
 
-      <div className="px-4 pb-8 md:px-0">
+  <div className="px-4 pb-8 md:px-0 mt-3 md:mt-0">
         <PublicRoadmapClient content={content} />
       </div>
     </div>

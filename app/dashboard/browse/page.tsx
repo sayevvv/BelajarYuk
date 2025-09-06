@@ -1,40 +1,77 @@
 // app/dashboard/browse/page.tsx
 import Link from 'next/link';
-import { headers } from 'next/headers';
 import RoadmapCard from '@/components/RoadmapCard';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth.config';
+import { prisma } from '@/lib/prisma';
 
 type BrowseParams = { q?: string; sort?: string; page?: string; pageSize?: string };
-async function getBaseUrl() {
-  try {
-  const h = await headers();
-    const host = h.get('x-forwarded-host') ?? h.get('host');
-  const proto = h.get('x-forwarded-proto') ?? (process.env.NODE_ENV === 'development' ? 'http' : 'https');
-    if (host) return `${proto}://${host}`;
-  } catch {}
-  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
-}
-
 async function getData(params: BrowseParams) {
-  const qs = new URLSearchParams();
-  if (params.q) qs.set('q', params.q);
-  if (params.sort) qs.set('sort', params.sort);
-  if (params.page) qs.set('page', params.page);
-  if (params.pageSize) qs.set('pageSize', params.pageSize);
-  const base = await getBaseUrl();
-  const res = await fetch(`${base}/api/public/roadmaps${qs.toString() ? `?${qs.toString()}` : ''}`, {
-    cache: 'no-store',
-    next: { tags: ['public-roadmaps'] },
-  });
-  const ct = res.headers.get('content-type') || '';
-  if (!res.ok || !ct.includes('application/json')) {
-    // Gracefully fallback to empty list to avoid HTML parse errors in prod
-    return { items: [], total: 0, page: Number(params.page || 1), pageSize: Number(params.pageSize || 12), totalPages: 1 };
+  const q = params.q?.toString() || '';
+  const sort = (params.sort?.toString() || 'newest').toLowerCase();
+  const page = Math.max(Number(params.page || 1), 1);
+  const pageSize = Math.min(Math.max(Number(params.pageSize || 12), 1), 50);
+  const skip = (page - 1) * pageSize;
+  const take = pageSize;
+
+  let orderBy: any = { publishedAt: 'desc' };
+  if (sort === 'oldest') orderBy = { publishedAt: 'asc' };
+  else if (sort === 'title_asc') orderBy = { title: 'asc' };
+  else if (sort === 'title_desc') orderBy = { title: 'desc' };
+  else if (sort === 'verified') orderBy = [{ verified: 'desc' }, { publishedAt: 'desc' }];
+
+  const where: any = { published: true, ...(q ? { title: { contains: q, mode: 'insensitive' as const } } : {}) };
+
+  try {
+    const [items, total] = await Promise.all([
+      (prisma as any).roadmap.findMany({
+        where,
+        orderBy,
+        take,
+        skip,
+        select: {
+          id: true,
+          userId: true,
+          title: true,
+          slug: true,
+          publishedAt: true,
+          verified: true,
+          user: { select: { name: true, image: true } },
+          content: true,
+        },
+      }),
+      (prisma as any).roadmap.count({ where }),
+    ]);
+
+    const ids = items.map((i: any) => i.id);
+    const topicRows = ids.length
+      ? await (prisma as any).roadmapTopic.findMany({ where: { roadmapId: { in: ids } }, include: { topic: true }, orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }] })
+      : [];
+    const topicsByRoadmap: Record<string, Array<{ slug: string; name: string; isPrimary: boolean }>> = {};
+    for (const r of topicRows) {
+      const arr = (topicsByRoadmap[r.roadmapId] ||= []);
+      if (r.topic) arr.push({ slug: r.topic.slug, name: r.topic.name, isPrimary: !!r.isPrimary });
+    }
+
+    const aggRows = ids.length
+      ? await (prisma as any).roadmapAggregates.findMany({ where: { roadmapId: { in: ids } } })
+      : [];
+    const aggById: Record<string, { avgStars?: number; ratingsCount?: number }> = Object.fromEntries(
+      aggRows.map((a: any) => [a.roadmapId, { avgStars: a.avgStars ?? 0, ratingsCount: a.ratingsCount ?? 0 }])
+    );
+
+    const itemsWithMeta = items.map((i: any) => ({
+      ...i,
+      topics: (topicsByRoadmap[i.id] || []).slice(0, 5),
+      avgStars: aggById[i.id]?.avgStars ?? 0,
+      ratingsCount: aggById[i.id]?.ratingsCount ?? 0,
+    }));
+
+    const totalPages = Math.max(Math.ceil(total / pageSize), 1);
+    return { items: itemsWithMeta, total, page, pageSize, totalPages };
+  } catch {
+    return { items: [], total: 0, page, pageSize, totalPages: 1 };
   }
-  return res.json();
 }
 
 export default async function BrowsePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
