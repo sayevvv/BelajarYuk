@@ -10,7 +10,7 @@ async function getBaseUrl() {
   try {
   const h = await headers();
     const host = h.get('x-forwarded-host') ?? h.get('host');
-    const proto = h.get('x-forwarded-proto') ?? 'http';
+  const proto = h.get('x-forwarded-proto') ?? (process.env.NODE_ENV === 'development' ? 'http' : 'https');
     if (host) return `${proto}://${host}`;
   } catch {}
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
@@ -26,8 +26,14 @@ async function getData(params: BrowseParams) {
   if (params.pageSize) qs.set('pageSize', params.pageSize);
   const base = await getBaseUrl();
   const res = await fetch(`${base}/api/public/roadmaps${qs.toString() ? `?${qs.toString()}` : ''}`, {
+    cache: 'no-store',
     next: { tags: ['public-roadmaps'] },
   });
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok || !ct.includes('application/json')) {
+    // Gracefully fallback to empty list to avoid HTML parse errors in prod
+    return { items: [], total: 0, page: Number(params.page || 1), pageSize: Number(params.pageSize || 12), totalPages: 1 };
+  }
   return res.json();
 }
 
