@@ -10,34 +10,30 @@ import TopicChips from '@/components/TopicChips';
 import { Suspense } from 'react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth.config';
-import { headers } from 'next/headers';
+import { prisma } from '@/lib/prisma';
 // import { cookies } from 'next/headers';
 // import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-async function getBaseUrl() {
-  try {
-  const h = await headers();
-  const proto = h.get('x-forwarded-proto') || (process.env.NODE_ENV === 'development' ? 'http' : 'https');
-  const host = h.get('x-forwarded-host') || h.get('host');
-    if (host) return `${proto}://${host}`;
-  } catch {}
-  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
-}
-
-
 async function getData(slug: string) {
-  const base = await getBaseUrl();
-  const res = await fetch(`${base}/api/public/roadmaps/${slug}`, {
-    // Unify behavior across dev/prod: always bypass cache for freshest data
-    cache: 'no-store',
-    next: { tags: [`public-roadmap:${slug}`] },
-  });
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const roadmap = await (prisma as any).roadmap.findFirst({
+      where: { slug, published: true },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        user: { select: { name: true, id: true } },
+        published: true,
+        slug: true,
+        verified: true,
+      },
+    });
+    return roadmap || null;
+  } catch {
+    return null;
+  }
 }
 
 export default async function PublicRoadmapPage({ params }: { params: Promise<{ slug: string }> }) {
