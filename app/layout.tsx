@@ -21,6 +21,12 @@ const crimsonPro = Crimson_Pro({
 export const metadata: Metadata = {
   title: "NextStep - AI Self-Paced Learning Roadmap",
   description: "Buat jalur belajar terstruktur dengan AI",
+  icons: {
+  // Add version query to bust caches across deploys
+  icon: { url: "/assets/mascot.png?v=2", type: "image/png" },
+  shortcut: { url: "/assets/mascot.png?v=2", type: "image/png" },
+  apple: { url: "/assets/mascot.png?v=2", type: "image/png" },
+  },
 };
 
 export default function RootLayout({
@@ -36,6 +42,9 @@ export default function RootLayout({
             __html: `(() => { try { const saved = localStorage.getItem('theme'); const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; const enableDark = saved ? saved === 'dark' : prefersDark; const el = document.documentElement; if (enableDark) el.classList.add('dark'); else el.classList.remove('dark'); } catch {} })();`,
           }}
         />
+  {/* Cache-bust the favicon links as well */}
+  <link rel="icon" href="/assets/mascot.png?v=2" type="image/png" />
+  <link rel="apple-touch-icon" href="/assets/mascot.png?v=2" />
   <link rel="preconnect" href="https://picsum.photos" crossOrigin="" />
   <link rel="dns-prefetch" href="https://picsum.photos" />
   <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="" />
