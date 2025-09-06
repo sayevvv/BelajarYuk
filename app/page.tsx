@@ -141,10 +141,10 @@ export default async function LandingPage() {
               </span>
             </div>
             <div className="mt-8 flex flex-col items-stretch gap-4 w-full max-w-sm">
-              <StartLearningCTA className="inline-flex items-center justify-center gap-3 rounded-xl bg-[#4B85B8] px-6 py-3 text-lg font-medium text-white hover:opacity-85 transition-colors" />
+              <StartLearningCTA forceLogin className="inline-flex items-center justify-center gap-3 rounded-xl bg-[#4B85B8] px-6 py-3 text-lg font-medium text-white hover:opacity-85 transition-colors" />
               <a
                 href="#features"
-                className="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 px-6 py-3 text-lg font-medium text-[#4B85B8] hover:bg-orange-100 dark:text-[#FCA142] dark:hover:bg-white/5 transition-colors"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 px-6 py-3 text-lg font-medium text-[#4B85B8] hover:bg-[#FCA142]/10 dark:text-[#FCA142] dark:hover:bg-white/5 transition-colors"
               >
                 Pelajari Lebih Lanjut
               </a>
@@ -174,10 +174,10 @@ export default async function LandingPage() {
             cta={
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-10">
                 {/* Primary CTA with brand blue */}
-                <StartLearningCTA className="inline-flex items-center justify-center gap-3 rounded-xl bg-[#4B85B8] px-5 py-2.5 text-white font-medium hover:opacity-85 transition-colors" />
+                <StartLearningCTA forceLogin className="inline-flex items-center justify-center gap-3 rounded-xl bg-[#4B85B8] px-5 py-2.5 text-white font-medium hover:opacity-85 transition-colors" />
                 <a
                   href="#features"
-                  className="rounded-xl border px-5 py-2.5 text-sm font-medium text-[#4B85B8] hover:bg-orange-100 dark:text-[#FCA142] dark:hover:bg-white/5"
+                  className="rounded-xl border px-5 py-2.5 text-sm font-medium text-[#4B85B8] hover:bg-[#FCA142]/10 dark:text-[#FCA142] dark:hover:bg-white/5"
                 >
                   Pelajari Lebih Lanjut
                 </a>
@@ -197,7 +197,7 @@ export default async function LandingPage() {
                   {marqueeItems.map((r: any) => (
                     <li key={`a-${r.id}`} className="shrink-0">
                       <Link
-                        href={hasLatest ? `/r/${r.slug}` : `/dashboard/browse`}
+                        href={`/login`}
                         className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-[#2a2a2a] bg-slate-50 dark:bg-[#0f0f0f] px-3 py-1.5 text-sm text-slate-700 dark:text-neutral-200 hover:bg-slate-100 dark:hover:bg-[#1a1a1a] hover:border-slate-300 dark:hover:border-[#3a3a3a] transition-colors"
                       >
                         <span className="font-semibold truncate max-w-[16rem]">{r.title}</span>
@@ -211,7 +211,7 @@ export default async function LandingPage() {
                   {marqueeItems.map((r: any) => (
                     <li key={`b-${r.id}`} className="shrink-0">
                       <Link
-                        href={hasLatest ? `/r/${r.slug}` : `/dashboard/browse`}
+                        href={`/login`}
                         className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-[#2a2a2a] bg-slate-50 dark:bg-[#0f0f0f] px-3 py-1.5 text-sm text-slate-700 dark:text-neutral-200 hover:bg-slate-100 dark:hover:bg-[#1a1a1a] hover:border-slate-300 dark:hover:border-[#3a3a3a] transition-colors"
                       >
                         <span className="font-semibold truncate max-w-[16rem]">{r.title}</span>
@@ -336,7 +336,7 @@ export default async function LandingPage() {
         </section>
 
   {/* Process */}
-  <section id='process' className="py-24 bg-orange-600 dark:bg-orange-700 transition-colors text-white">
+  <section id='process' className="py-24 bg-[#FCA142] dark:bg-[#FCA142] transition-colors text-white">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               <div>
@@ -457,7 +457,7 @@ export default async function LandingPage() {
                 Mulai langkah baru dengan NextStep—rancang roadmap personal dan capai tujuan belajar Anda.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <StartLearningCTA className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#4B85B8] px-12 py-4 text-white font-medium hover:opacity-85 transition-colors" />
+                <StartLearningCTA forceLogin className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#4B85B8] px-12 py-4 text-white font-medium hover:opacity-85 transition-colors" />
               </div>
             </div>
           </div>

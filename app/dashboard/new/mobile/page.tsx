@@ -532,7 +532,7 @@ export default function NewRoadmapMobilePage() {
               <div className="p-3">
                 <div className="space-y-2">
                   <button type="button" onClick={() => { setUseAltModel(false); setModelModalOpen(false); }} className={`w-full text-left px-3 py-2 rounded-md border ${!useAltModel ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-[#0e223a]' : 'border-slate-200 dark:border-[#2a2a2a]'} hover:bg-slate-50 dark:hover:bg-[#151515]`}>Gemini 1.5 Flash</button>
-                  <button type="button" onClick={() => { setUseAltModel(true); setModelModalOpen(false); }} className={`w-full text-left px-3 py-2 rounded-md border ${useAltModel ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-[#0e223a]' : 'border-slate-200 dark:border-[#2a2a2a]'} hover:bg-slate-50 dark:hover:bg-[#151515]`}>GitHub Models</button>
+                  <button type="button" onClick={() => { setUseAltModel(true); setModelModalOpen(false); }} className={`w-full text-left px-3 py-2 rounded-md border ${useAltModel ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-[#0e223a]' : 'border-slate-200 dark:border-[#2a2a2a]'} hover:bg-slate-50 dark:hover:bg-[#151515]`}>gpt 5 mini</button>
                 </div>
               </div>
               <div className="p-3 border-t border-slate-200 dark:border-[#1f1f1f] flex justify-end">

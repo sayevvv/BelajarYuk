@@ -32,6 +32,14 @@ const nextConfig: NextConfig = {
       ],
     },
   ],
+  // Force browsers that request /favicon.ico directly to use the mascot PNG
+  redirects: async () => [
+    {
+      source: '/favicon.ico',
+      destination: '/assets/mascot.png?v=3',
+      permanent: false, // temporary to avoid sticky caches; switch to true later
+    },
+  ],
   images: {
     remotePatterns: [
       {

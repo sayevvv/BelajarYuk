@@ -136,7 +136,7 @@ export default function NewRoadmapPage() {
   const [activePromptMode, setActivePromptMode] = useState<'simple' | 'advanced'>('simple');
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Model selection: default uses Gemini; alt uses GitHub Models
+  // Model selection: default uses Gemini; alt uses Gpt-5-mini
   const [useAltModel, setUseAltModel] = useState(false);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   // Chat-like AI edit state (now lives in the left panel after roadmap exists)
@@ -721,7 +721,7 @@ export default function NewRoadmapPage() {
                     onClick={() => setModelMenuOpen((v)=>!v)}
                     className={`w-full justify-between inline-flex items-center gap-2 border rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 ${genActive ? 'opacity-60 cursor-not-allowed' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                   >
-                    <span className="truncate">{useAltModel ? 'GitHub Models' : 'Gemini 1.5 Flash'}</span>
+                    <span className="truncate">{useAltModel ? 'Gpt-5-mini' : 'Gemini 1.5 Flash'}</span>
                     <svg className={`h-4 w-4 transition-transform ${modelMenuOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 011.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd"/></svg>
                   </button>
                   {modelMenuOpen && (
@@ -743,7 +743,7 @@ export default function NewRoadmapPage() {
                             aria-selected={useAltModel}
                             className={`w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 ${useAltModel ? 'text-blue-600 font-semibold' : 'text-slate-700 dark:text-slate-200'}`}
                             onClick={() => { setUseAltModel(true); setModelMenuOpen(false); }}
-                          >GitHub Models</button>
+                          >Gpt-5-mini</button>
                         </li>
                       </ul>
                     </div>
