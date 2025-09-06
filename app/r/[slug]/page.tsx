@@ -10,15 +10,17 @@ import TopicChips from '@/components/TopicChips';
 import { Suspense } from 'react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth.config';
-import { cookies, headers } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+// import { cookies } from 'next/headers';
+// import { redirect } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 
 async function getBaseUrl() {
-  // Prefer current request host to avoid env/domain mismatches in production
   try {
   const h = await headers();
-    const proto = h.get('x-forwarded-proto') || 'https';
-    const host = h.get('x-forwarded-host') || h.get('host');
+  const proto = h.get('x-forwarded-proto') || (process.env.NODE_ENV === 'development' ? 'http' : 'https');
+  const host = h.get('x-forwarded-host') || h.get('host');
     if (host) return `${proto}://${host}`;
   } catch {}
   if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
@@ -26,11 +28,12 @@ async function getBaseUrl() {
   return 'http://localhost:3000';
 }
 
+
 async function getData(slug: string) {
   const base = await getBaseUrl();
   const res = await fetch(`${base}/api/public/roadmaps/${slug}`, {
-    // Avoid stale caches on preview/dev; keep tag-based revalidation for prod
-    cache: process.env.VERCEL_ENV === 'production' ? 'force-cache' : 'no-store',
+    // Unify behavior across dev/prod: always bypass cache for freshest data
+    cache: 'no-store',
     next: { tags: [`public-roadmap:${slug}`] },
   });
   if (!res.ok) return null;
